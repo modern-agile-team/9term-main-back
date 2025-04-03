@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id          Int           @id @default(autoincrement())
+  username    String
+  password    String
+  name        String
+  comments    comments[]
+  post_likes  post_likes[]
+  posts       posts[]
+  user_groups user_groups[]
+}
+
+model groups {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  description String?
+  createdAt   DateTime      @default(now())
+  posts       posts[]
+  user_groups user_groups[]
+}
+
+model user_groups {
+  id      Int    @id @default(autoincrement())
+  userId  Int
+  groupId Int
+  role    String @default("member")
+  group   groups @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model posts {
+  id         Int          @id @default(autoincrement())
+  userId     Int
+  groupId    Int
+  title      String       @db.VarChar(255)
+  content    String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime?
+  comments   comments[]
+  post_likes post_likes[]
+  group      groups       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user       users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model post_likes {
+  id     Int   @id @default(autoincrement())
+  postId Int
+  userId Int
+  post   posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model comments {
+  id        Int        @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  content   String
+  parentId  Int?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime?
+  parent    comments?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  children  comments[] @relation("replies")
+  post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
