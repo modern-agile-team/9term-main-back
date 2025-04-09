@@ -11,7 +11,7 @@ CREATE TABLE "users" (
 -- CreateTable
 CREATE TABLE "groups" (
     "id" SERIAL NOT NULL,
-    "name" VARCHAR(255) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -64,10 +64,22 @@ CREATE TABLE "comments" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "users_user_name_key" ON "users"("user_name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "user_groups_user_id_group_id_key" ON "user_groups"("user_id", "group_id");
 
 -- CreateIndex
+CREATE INDEX "posts_group_id_created_at_idx" ON "posts"("group_id", "created_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "post_likes_post_id_user_id_key" ON "post_likes"("post_id", "user_id");
+
+-- CreateIndex
+CREATE INDEX "comments_post_id_idx" ON "comments"("post_id");
+
+-- CreateIndex
+CREATE INDEX "comments_parent_id_idx" ON "comments"("parent_id");
 
 -- AddForeignKey
 ALTER TABLE "user_groups" ADD CONSTRAINT "user_groups_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "groups"("id") ON DELETE CASCADE ON UPDATE CASCADE;

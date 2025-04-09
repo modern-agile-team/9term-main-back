@@ -16,19 +16,20 @@ datasource db {
 model User {
   id         Int         @id @default(autoincrement())
   userName   String      @map("user_name") // 로그인 시 아이디
-  password   String
+  password   String    
   name       String      @db.VarChar(50)  // 사용자 이름
   comments   Comment[]
   postLikes  PostLike[]  
   posts      Post[]
   userGroups UserGroup[] 
 
+  @@unique([userName])
   @@map("users")
 }
 
 model Group {
   id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(255)
+  name        String      @db.VarChar(100)
   description String?
   createdAt   DateTime    @default(now()) @map("created_at")
   posts       Post[]
@@ -63,6 +64,7 @@ model Post {
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("posts")
+  @@index([groupId, createdAt])
 }
 
 model PostLike {
@@ -90,4 +92,6 @@ model Comment {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("comments")
+  @@index([postId])  
+  @@index([parentId])
 }
