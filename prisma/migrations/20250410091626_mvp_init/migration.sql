@@ -1,9 +1,10 @@
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
-    "user_name" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
+    "user_name" VARCHAR(20) NOT NULL,
+    "password" VARCHAR(60) NOT NULL,
     "name" VARCHAR(50) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -24,6 +25,7 @@ CREATE TABLE "user_groups" (
     "user_id" INTEGER NOT NULL,
     "group_id" INTEGER NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'member',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "user_groups_pkey" PRIMARY KEY ("id")
 );

@@ -14,14 +14,15 @@ datasource db {
 }
 
 model User {
-  id         Int         @id @default(autoincrement())
-  userName   String      @map("user_name") // 로그인 시 아이디
-  password   String    
-  name       String      @db.VarChar(50)  // 사용자 이름
-  comments   Comment[]
-  postLikes  PostLike[]  
-  posts      Post[]
-  userGroups UserGroup[] 
+  id           Int           @id @default(autoincrement())
+  userName     String        @map("user_name")  @db.VarChar(20)       // 로그인 시 아이디
+  password     String        @db.VarChar(60) 
+  name         String        @db.VarChar(50)           // 사용자 이름
+  createdAt    DateTime      @default(now()) @map("created_at")
+  comments     Comment[]
+  postLikes    PostLike[]  
+  posts        Post[]
+  userGroups   UserGroup[] 
 
   @@unique([userName])
   @@map("users")
@@ -39,12 +40,13 @@ model Group {
 }
 
 model UserGroup {
-  id      Int    @id @default(autoincrement())
-  userId  Int    @map("user_id")
-  groupId Int    @map("group_id")
-  role    String @default("member")
-  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  groupId   Int       @map("group_id")
+  role      String    @default("member")
+  createdAt DateTime  @default(now()) @map("created_at")
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
   @@map("user_groups")
