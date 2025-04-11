@@ -13,71 +13,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model users {
-  id          Int           @id @default(autoincrement())
-  username    String
-  password    String
-  name        String
-  comments    comments[]
-  post_likes  post_likes[]
-  posts       posts[]
-  user_groups user_groups[]
+model User {
+  id           Int           @id @default(autoincrement())
+  userName     String        @map("user_name")  @db.VarChar(20)       // 로그인 시 아이디
+  password     String        @db.VarChar(60) 
+  name         String        @db.VarChar(50)           // 사용자 이름
+  createdAt    DateTime      @default(now()) @map("created_at")
+  comments     Comment[]
+  postLikes    PostLike[]  
+  posts        Post[]
+  userGroups   UserGroup[] 
+
+  @@unique([userName])
+  @@map("users")
 }
 
-model groups {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.VarChar(255)
+model Group {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(100)
   description String?
-  createdAt   DateTime      @default(now())
-  posts       posts[]
-  user_groups user_groups[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  posts       Post[]
+  userGroups  UserGroup[] 
+
+  @@map("groups")
 }
 
-model user_groups {
-  id      Int    @id @default(autoincrement())
-  userId  Int
-  groupId Int
-  role    String @default("member")
-  group   groups @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user    users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+model UserGroup {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  groupId   Int       @map("group_id")
+  role      String    @default("member")
+  createdAt DateTime  @default(now()) @map("created_at")
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
+  @@map("user_groups")
 }
 
-model posts {
-  id         Int          @id @default(autoincrement())
-  userId     Int
-  groupId    Int
-  title      String       @db.VarChar(255)
+model Post {
+  id         Int        @id @default(autoincrement())
+  userId     Int        @map("user_id")
+  groupId    Int        @map("group_id")
+  title      String     @db.VarChar(255)
   content    String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime?
-  comments   comments[]
-  post_likes post_likes[]
-  group      groups       @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime?  @map("updated_at")
+  comments   Comment[]
+  postLikes  PostLike[] 
+  group      Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("posts")
+  @@index([groupId, createdAt])
 }
 
-model post_likes {
+model PostLike {
   id     Int   @id @default(autoincrement())
-  postId Int
-  userId Int
-  post   posts @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId Int   @map("post_id")
+  userId Int   @map("user_id")
+  post   Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+  @@map("post_likes")
 }
 
-model comments {
+model Comment {
   id        Int        @id @default(autoincrement())
-  postId    Int
-  userId    Int
+  postId    Int        @map("post_id")
+  userId    Int        @map("user_id")
   content   String
-  parentId  Int?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime?
-  parent    comments?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
-  children  comments[] @relation("replies")
-  post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  Int?       @map("parent_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime?  @map("updated_at")
+  parent    Comment?   @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Comment[]  @relation("replies")
+  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+  @@index([postId])  
+  @@index([parentId])
 }
