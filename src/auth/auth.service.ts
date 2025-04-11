@@ -11,8 +11,8 @@ export class AuthService {
 
   // 회원가입
   async signup(dto: SignupDto) {
-    const existingUser = await this.prisma.users.findUnique({
-      where: { username: dto.username },
+    const existingUser = await this.prisma.user.findUnique({
+      where: { userName: dto.userName },
     });
 
     if (existingUser) {
@@ -21,10 +21,9 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.users.create({
+    const user = await this.prisma.user.create({
       data: {
-        username: dto.username,
-        id: dto.id,
+        userName: dto.userName,
         name: dto.name,
         password: hashedPassword,
       },
@@ -35,8 +34,8 @@ export class AuthService {
 
   // 로그인
   async login(dto: LoginDto) {
-    const user = await this.prisma.users.findUnique({
-      where: { username: dto.username },
+    const user = await this.prisma.user.findUnique({
+      where: { userName: dto.userName },
     });
 
     if (!user) {
@@ -49,15 +48,12 @@ export class AuthService {
       throw new BadRequestException('이메일 또는 비밀번호가 틀렸습니다.');
     }
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      'JWT_SECRET_KEY',
-      { expiresIn: '7d' },
-    );
+    const token = jwt.sign({ username: user.userName }, 'JWT_SECRET_KEY', {
+      expiresIn: '7d',
+    });
 
     return {
       token,
-      userId: user.id,
     };
   }
 }

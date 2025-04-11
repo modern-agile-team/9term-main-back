@@ -1,6 +1,5 @@
 export class SignupDto {
-  username: string;
-  id: number;
+  userName: string;
   name: string;
   password: string;
 }

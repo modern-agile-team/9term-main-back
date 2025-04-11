@@ -12,7 +12,6 @@ export class AuthController {
     const user = await this.authService.signup(dto);
     return {
       message: '회원가입 성공',
-      userId: user.id,
     };
   }
 
@@ -21,7 +20,6 @@ export class AuthController {
     const result = await this.authService.login(dto);
     return {
       token: result.token,
-      userId: result.userId,
     };
   }
 }
