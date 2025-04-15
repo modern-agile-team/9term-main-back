@@ -8,16 +8,16 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  async signup(@Body() dto: SignupDto) {
-    const user = await this.authService.signup(dto);
+  async signup(@Body() signupdto: SignupDto) {
+    await this.authService.signup(signupdto);
     return {
-      message: '회원가입 성공',
+      success: true,
     };
   }
 
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    const result = await this.authService.login(dto);
+  async login(@Body() logindto: LoginDto) {
+    const result = await this.authService.login(logindto);
     return {
       token: result.token,
     };
