@@ -1,59 +1,78 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { SignupDto } from './dto/signup.dto';
-import { LoginDto } from './dto/login.dto';
+import { SignupRequestDto } from './dto/signup-request.dto';
+import { LoginRequestDto } from './dto/login-request.dto';
+import { UserRepository } from './user.repository';
 import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { PasswordEncoderService } from 'src/auth/password-encoder.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly passwordEncoderService: PasswordEncoderService,
+  ) {}
 
   // 회원가입
-  async signup(signupdto: SignupDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { userName: signupdto.userName },
-    });
+  async signup(signupRequestDto: SignupRequestDto) {
+    const existingUser = await this.userRepository.findByUserName(
+      signupRequestDto.userName,
+    );
 
     if (existingUser) {
       throw new BadRequestException('이미 사용 중인 사용자 이름입니다.');
     }
 
-    const hashedPassword = await bcrypt.hash(signupdto.password, 10);
+    const hashedPassword = await this.passwordEncoderService.hash(
+      signupRequestDto.password,
+    );
 
-    const user = await this.prisma.user.create({
-      data: {
-        userName: signupdto.userName,
-        name: signupdto.name,
-        password: hashedPassword,
-      },
+    const user = await this.userRepository.createUser({
+      userName: signupRequestDto.userName,
+      name: signupRequestDto.name,
+      password: hashedPassword,
     });
 
     return user;
   }
 
   // 로그인
-  async login(logindto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { userName: logindto.userName },
-    });
+  async login(loginRequestDto: LoginRequestDto) {
+    const user = await this.userRepository.findByUserName(
+      loginRequestDto.userName,
+    );
 
     if (!user) {
-      throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
+      throw new BadRequestException('이메일 또는 비밀번호가 틀렸습니다.');
     }
 
-    const isMatch = await bcrypt.compare(logindto.password, user.password);
+    const isMatch = await bcrypt.compare(
+      loginRequestDto.password,
+      user.password,
+    );
 
     if (!isMatch) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
 
-    const token = jwt.sign({ username: user.userName }, 'JWT_SECRET_KEY', {
-      expiresIn: '7d',
+    const payload = { username: user.userName };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET_KEY'),
+      expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES_IN'),
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
     });
 
     return {
-      token,
+      accessToken,
+      refreshToken,
     };
   }
 }
