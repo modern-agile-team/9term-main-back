@@ -2,7 +2,6 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { SignupRequestDto } from './dto/signup-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { UserRepository } from './user.repository';
-import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PasswordEncoderService } from 'src/auth/password-encoder.service';
@@ -49,7 +48,7 @@ export class AuthService {
       throw new BadRequestException('이메일 또는 비밀번호가 틀렸습니다.');
     }
 
-    const isMatch = await bcrypt.compare(
+    const isMatch = await this.passwordEncoderService.compare(
       loginRequestDto.password,
       user.password,
     );
@@ -58,16 +57,18 @@ export class AuthService {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
 
-    const payload = { username: user.userName };
+    const payload = { sub: user.id, username: user.userName };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET_KEY'),
-      expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES_IN'),
+      secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
+      expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
+      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.getOrThrow<string>(
+        'JWT_REFRESH_EXPIRES_IN',
+      ),
     });
 
     return {
