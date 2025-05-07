@@ -13,6 +13,10 @@ export class UserController {
     description: '로그인 유저의 정보를 반환',
   })
   getProfile(@Req() req) {
-    return req.user;
+    return {
+      status: 'success',
+      message: '내 정보 조회 성공',
+      data: req.user,
+    };
   }
 }

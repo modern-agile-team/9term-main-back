@@ -12,9 +12,12 @@ export class AuthController {
 
   @Post('signup')
   async signup(@Body() signupRequestDto: SignupRequestDto) {
-    await this.authService.signup(signupRequestDto);
+    const user = await this.authService.signup(signupRequestDto);
+
     return {
-      success: true,
+      status: 'success',
+      message: '회원가입 성공',
+      data: null,
     };
   }
 
@@ -33,7 +36,9 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7일동안 유지
     });
     return {
-      accessToken,
+      status: 'success',
+      message: '로그인 성공',
+      data: { accessToken },
     };
   }
 }
