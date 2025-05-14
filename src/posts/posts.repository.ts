@@ -1,4 +1,5 @@
 // src/posts/posts.repository.ts
+
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -30,13 +31,14 @@ export class PostsRepository {
     });
   }
 
-  async updatePostById(
-    id: number,
-    data: { title?: string; content?: string; updatedAt?: Date },
-  ) {
+  async updatePostById(id: number, data: { title?: string; content?: string }) {
     return this.prisma.post.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        content: data.content,
+        updatedAt: new Date(),
+      },
     });
   }
 
