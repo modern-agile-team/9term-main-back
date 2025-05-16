@@ -4,7 +4,7 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { UserRepository } from './user.repository';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PasswordEncoderService } from 'src/auth/password-encoder.service';
+import { PasswordEncoderService } from './password-encoder.service';
 
 @Injectable()
 export class AuthService {
@@ -29,13 +29,17 @@ export class AuthService {
       signupRequestDto.password,
     );
 
-    const user = await this.userRepository.createUser({
+    await this.userRepository.createUser({
       userName: signupRequestDto.userName,
       name: signupRequestDto.name,
       password: hashedPassword,
     });
 
-    return user;
+    return {
+      status: 'success',
+      message: '회원가입 성공',
+      data: null,
+    };
   }
 
   // 로그인
@@ -45,7 +49,7 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new BadRequestException('이메일 또는 비밀번호가 틀렸습니다.');
+      throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
 
     const isMatch = await this.passwordEncoderService.compare(
@@ -72,8 +76,12 @@ export class AuthService {
     });
 
     return {
-      accessToken,
-      refreshToken,
+      status: 'success',
+      message: '로그인 성공',
+      data: {
+        accessToken,
+        refreshToken,
+      },
     };
   }
 }

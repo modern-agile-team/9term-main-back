@@ -12,13 +12,7 @@ export class AuthController {
 
   @Post('signup')
   async signup(@Body() signupRequestDto: SignupRequestDto) {
-    const user = await this.authService.signup(signupRequestDto);
-
-    return {
-      status: 'success',
-      message: '회원가입 성공',
-      data: null,
-    };
+    return await this.authService.signup(signupRequestDto);
   }
 
   @Post('login')
@@ -26,19 +20,21 @@ export class AuthController {
     @Body() loginRequestDto: LoginRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken } =
-      await this.authService.login(loginRequestDto);
+    const result = await this.authService.login(loginRequestDto);
 
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true, // JS로 접근 불가
-      secure: true, // HTTPS일 때만 전송
-      sameSite: 'strict', // 크로스 도메인 전송 제한
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7일동안 유지
+    res.cookie('refresh_token', result.data.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
+    const { refreshToken, ...restData } = result.data;
+
     return {
-      status: 'success',
-      message: '로그인 성공',
-      data: { accessToken },
+      status: result.status,
+      message: result.message,
+      data: restData,
     };
   }
 }
