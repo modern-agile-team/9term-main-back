@@ -5,11 +5,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserController } from './auth/user.controller';
+import { PostsModule } from './posts/posts.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
+    PostsModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
