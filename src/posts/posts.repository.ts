@@ -20,12 +20,26 @@ export class PostsRepository {
     return await this.prisma.post.findMany({
       where: { groupId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            userName: true,
+          },
+        },
+      },
     });
   }
 
   async findPostById(id: number) {
     return await this.prisma.post.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            userName: true,
+          },
+        },
+      },
     });
   }
 
