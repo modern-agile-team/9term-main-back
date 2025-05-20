@@ -16,7 +16,7 @@ export class AuthService {
   ) {}
 
   // 회원가입
-  async signup(signupRequestDto: SignupRequestDto) {
+  async signup(signupRequestDto: SignupRequestDto): Promise<void> {
     const existingUser = await this.userRepository.findByUserName(
       signupRequestDto.userName,
     );
@@ -34,16 +34,13 @@ export class AuthService {
       name: signupRequestDto.name,
       password: hashedPassword,
     });
-
-    return {
-      status: 'success',
-      message: '회원가입 성공',
-      data: null,
-    };
   }
 
   // 로그인
-  async login(loginRequestDto: LoginRequestDto) {
+  async login(loginRequestDto: LoginRequestDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
     const user = await this.userRepository.findByUserName(
       loginRequestDto.userName,
     );
@@ -76,12 +73,8 @@ export class AuthService {
     });
 
     return {
-      status: 'success',
-      message: '로그인 성공',
-      data: {
-        accessToken,
-        refreshToken,
-      },
+      accessToken,
+      refreshToken,
     };
   }
 }
