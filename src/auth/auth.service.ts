@@ -22,7 +22,7 @@ export class AuthService {
     );
 
     if (existingUser) {
-      throw new BadRequestException('이미 사용 중인 사용자 이름입니다.');
+      throw new BadRequestException('이미 사용 중인 아이디입니다.');
     }
 
     const hashedPassword = await this.passwordEncoderService.hash(
