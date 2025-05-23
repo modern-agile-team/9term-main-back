@@ -13,11 +13,11 @@ import {
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
+import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
 
 @Controller('groups/:groupId/posts')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(CustomJwtAuthGuard)
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
