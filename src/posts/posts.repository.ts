@@ -23,7 +23,7 @@ export class PostsRepository {
       include: {
         user: {
           select: {
-            userName: true,
+            name: true,
           },
         },
       },
@@ -36,7 +36,7 @@ export class PostsRepository {
       include: {
         user: {
           select: {
-            userName: true,
+            name: true,
           },
         },
       },
