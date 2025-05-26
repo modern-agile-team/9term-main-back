@@ -1,24 +1,26 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
+import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
-@Controller('/posts')
+
+@UseGuards(CustomJwtAuthGuard)
+@Controller('groups/:groupId/posts')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
-  @UseGuards(AuthGuard('jwt'))
   @Post(':postId/comments')
   async createComment(
+    @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const created = await this.commentsService.create(createCommentDto, userId, postId);
+    const created = await this.commentsService.commentCreate(createCommentDto, userId, postId);
     return {
       status: 'success',
       message: '댓글이 성공적으로 생성되었습니다.',
@@ -27,7 +29,8 @@ export class CommentsController {
   }
 
   @Get(':postId/comments')
-  async getcommentsByPost(
+  async getCommentsByPost(
+    @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
     @Query('parentId', new ParseIntPipe({ optional: true })) parentId?: number,
   ) {
@@ -39,16 +42,16 @@ export class CommentsController {
     };
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Patch(':postId/comments/:id')
-  async update(
+  async updateComment(
+    @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCommentDto: UpdateCommentDto,
     @Req() req: Request,
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const updated = await this.commentsService.update(id, updateCommentDto, userId);
+    const updated = await this.commentsService.commentUpdate(id, updateCommentDto, userId);
     return {
       status: 'success',
       message: '댓글이 성공적으로 수정되었습니다.',
@@ -56,15 +59,15 @@ export class CommentsController {
     };
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Delete(':postId/comments/:id')
-  async delete(
+  async deleteComment(
+    @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const deleted = await this.commentsService.delete(id, userId);
+    const deleted = await this.commentsService.commentDelete(id, userId);
     return {
       status: 'success',
       message: '댓글이 성공적으로 삭제되었습니다.',

@@ -7,12 +7,13 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 export class CommentsService {
     constructor(private readonly commentsRepo: CommentsRepository) {}
 
+
     // 댓글 생성 (부모 댓글이 있을 경우 parentId 설정)
-    async create(createCommentDto: CreateCommentDto, userId: number, postId: number) {
+    async commentCreate(createCommentDto: CreateCommentDto, userId: number, postId: number) {
         const { content, parentId } = createCommentDto;
 
         if (!content?.trim()) {
-            throw new BadRequestException('댓글 내용은 필수입니다.');
+            throw new BadRequestException('댓글 내용을 입력해주세요.');
         }
 
         if (parentId) {
@@ -48,7 +49,7 @@ export class CommentsService {
     }
 
     // 댓글 수정 
-    async update(id: number, updateCommentDto: UpdateCommentDto, userId: number) {
+    async commentUpdate(id: number, updateCommentDto: UpdateCommentDto, userId: number) {
     const comment = await this.verifyCommentOwnership(id, userId);    
         const newContent = updateCommentDto.content?.trim();
 
@@ -59,18 +60,18 @@ export class CommentsService {
     }     
 
     // 댓글 삭제
-    async delete(id: number, userId: number) {
-        const comment = await this.verifyCommentOwnership(id, userId);
+    async commentDelete(id: number, userId: number) {
+        await this.verifyCommentOwnership(id, userId);
         return this.commentsRepo.deleteComment(id);
     }
 
     private async verifyCommentOwnership(commentId: number, userId: number) {
         const comment = await this.commentsRepo.findCommentById(commentId);
         if (!comment) {
-            throw new NotFoundException('해당 댓글을 찾을 수 없습니다.');
+            throw new NotFoundException('해당 댓글이 존재하지 않습니다.');
         }
         if (comment.userId !== userId) {
-            throw new ForbiddenException('해당 댓글에 대한 수정/삭제 권한이 없습니다.');
+            throw new ForbiddenException('해당 댓글을 수정하거나 삭제할 수 있는 권한이 없습니다.');
         }
         return comment;
     }
