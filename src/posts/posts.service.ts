@@ -22,23 +22,11 @@ export class PostsService {
       groupId,
       userId,
     };
-    const createdPost = await this.postsRepository.createPost(createPostData);
-    return {
-      status: 'success',
-      message: '게시글 작성 성공',
-      data: createdPost,
-    };
+    return await this.postsRepository.createPost(createPostData);
   }
 
   async getAllPosts(groupId: number) {
-    const posts = await this.postsRepository.findPostsByGroupId(groupId);
-    return {
-      status: 'success',
-      message: posts.length
-        ? '게시글 목록 조회 성공'
-        : '아직 게시글이 없습니다.',
-      data: posts,
-    };
+    return await this.postsRepository.findPostsByGroupId(groupId);
   }
 
   async getPostById(id: number) {
@@ -46,11 +34,7 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
     }
-    return {
-      status: 'success',
-      message: '게시글 조회 성공',
-      data: post,
-    };
+    return post;
   }
 
   async updatePost(updatePostDto: UpdatePostDto, id: number, userId: number) {
@@ -65,16 +49,8 @@ export class PostsService {
       title: updatePostDto.title,
       content: updatePostDto.content,
     };
-    const updatedPost = await this.postsRepository.updatePostById(
-      id,
-      updatedPostData,
-    );
 
-    return {
-      status: 'success',
-      message: '게시물 수정 성공',
-      data: updatedPost,
-    };
+    return await this.postsRepository.updatePostById(id, updatedPostData);
   }
 
   async deletePost(id: number, userId: number) {
@@ -85,11 +61,7 @@ export class PostsService {
     if (post.userId !== userId) {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
-    const deletedPost = await this.postsRepository.deletePostById(id);
-    return {
-      status: 'success',
-      message: '삭제 성공',
-      data: deletedPost,
-    };
+
+    return await this.postsRepository.deletePostById(id);
   }
 }
