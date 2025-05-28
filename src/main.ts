@@ -1,12 +1,18 @@
-import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(new ValidationPipe());
+
+  app.enableCors({
+    origin: ['https://localhost:3001', 'https://192.168.56.1:3001','https://www.modonggu.site'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE, OPTIONS', 
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('모동구')
