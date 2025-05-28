@@ -25,9 +25,9 @@ export class CommentsRepository {
         });
     }  
 
-    findComments(postId: number, parentId?: number | null) {
+    findComments(postId: number, parentId: number | null = null) {
         return this.prisma.comment.findMany({
-            where: { postId, parentId: parentId ?? null },
+            where: { postId, parentId },
             orderBy: { createdAt: "asc" }, // 댓글 오름차순 정렬
             include: {
                 user: {

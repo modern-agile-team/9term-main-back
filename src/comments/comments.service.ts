@@ -43,7 +43,7 @@ export class CommentsService {
         if (parentId) {
             const parentComment = await this.commentsRepo.findCommentById(parentId);
             if (!parentComment) {
-                throw new NotFoundException('존재하지 않는 부모 댓글입니다.');
+                return [];
             }
             if (parentComment.postId !== postId) {
                 throw new NotFoundException('존재하지 않는 부모 댓글이거나, 해당 게시글의 댓글이 아닙니다.');
