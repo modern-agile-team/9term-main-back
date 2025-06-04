@@ -5,6 +5,9 @@ export class SignupRequestDto {
   @ApiProperty({
     example: 'test123',
     description: '사용자 ID (영문자+숫자, 숫자만 불가)',
+    pattern: '^(?!\\d+$)[a-zA-Z0-9]+$',
+    minLength: 4,
+    maxLength: 20,
   })
   @IsString()
   @Length(4, 20)
@@ -17,16 +20,21 @@ export class SignupRequestDto {
   @ApiProperty({
     example: '홍길동',
     description: '사용자 이름 (2~30자)',
+    minLength: 2,
+    maxLength: 30,
   })
   @IsString()
-  @Length(2, 30)
+  @Length(2, 30, {
+    message: '이름은 2자 이상 30자 이하로 입력해주세요.',
+  })
   name: string;
 
   @ApiProperty({
     example: 'password123',
     description: '비밀번호 (8자 이상)',
+    minLength: 8,
   })
   @IsString()
-  @MinLength(8)
+  @MinLength(8, { message: '비밀번호는 8자 이상이어야 합니다.' })
   password: string;
 }

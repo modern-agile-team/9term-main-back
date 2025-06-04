@@ -7,6 +7,7 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { UserProfileDto, UserProfileResponseDto } from './user.dto';
 
 @ApiTags('User')
 @Controller('users')
@@ -18,20 +19,7 @@ export class UserController {
     summary: '내 정보 조회',
     description: '로그인 유저의 정보를 반환',
   })
-  @ApiOkResponse({
-    description: '내 정보 조회 성공',
-    schema: {
-      example: {
-        status: 'success',
-        message: '내 정보 조회 성공',
-        data: {
-          id: 1,
-          username: 'test123',
-          name: '테스트',
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: UserProfileResponseDto })
   @ApiUnauthorizedResponse({
     description: '토큰이 없거나 유효하지 않음',
     schema: {
@@ -61,10 +49,14 @@ export class UserController {
     },
   })
   getProfile(@Req() req) {
-    return {
-      status: 'success',
-      message: '내 정보 조회 성공',
-      data: req.user,
-    };
+    const userProfile = new UserProfileDto();
+    userProfile.name = req.user.name;
+
+    const response = new UserProfileResponseDto();
+    response.status = 'success';
+    response.message = '내 정보 조회 성공';
+    response.data = userProfile;
+
+    return response;
   }
 }

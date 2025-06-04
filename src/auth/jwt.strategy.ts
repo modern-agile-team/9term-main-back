@@ -15,6 +15,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    return { userId: payload.sub, username: payload.username }; // payload는 JWT 토큰의 페이로드 부분이다.
+    return {
+      userId: payload.sub,
+      username: payload.username,
+      name: payload.name,
+    }; // payload는 JWT 토큰의 페이로드 부분이다.
   }
 }
