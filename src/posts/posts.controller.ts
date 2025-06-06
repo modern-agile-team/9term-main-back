@@ -1,20 +1,21 @@
 import {
   Controller,
-  Get,
   Post,
-  Body,
+  Get,
   Patch,
-  Param,
   Delete,
-  ParseIntPipe,
-  UseGuards,
+  Param,
+  Body,
   Req,
+  UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { ApiPosts } from './post.swagger';
 
 @Controller('groups/:groupId/posts')
 @UseGuards(CustomJwtAuthGuard)
@@ -22,18 +23,14 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
+  @ApiPosts.create()
   async createPost(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Body() createPostDto: CreatePostDto,
+    @Body() dto: CreatePostDto,
     @Req() req: Request,
   ) {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
-    const post = await this.postsService.createPost(
-      createPostDto,
-      groupId,
-      userId,
-    );
+    const userId = (req.user as any).userId;
+    const post = await this.postsService.createPost(dto, groupId, userId);
     return {
       status: 'success',
       message: '게시물이 성공적으로 생성되었습니다.',
@@ -42,6 +39,7 @@ export class PostsController {
   }
 
   @Get()
+  @ApiPosts.getAll()
   async getAllPosts(@Param('groupId', ParseIntPipe) groupId: number) {
     const posts = await this.postsService.getAllPosts(groupId);
     return {
@@ -52,6 +50,7 @@ export class PostsController {
   }
 
   @Get(':postId')
+  @ApiPosts.getOne()
   async getPostById(@Param('postId', ParseIntPipe) postId: number) {
     const post = await this.postsService.getPostById(postId);
     return {
@@ -62,32 +61,28 @@ export class PostsController {
   }
 
   @Patch(':postId')
+  @ApiPosts.update()
   async updatePost(
     @Param('postId', ParseIntPipe) postId: number,
-    @Body() updatePostDto: UpdatePostDto,
+    @Body() dto: UpdatePostDto,
     @Req() req: Request,
   ) {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
-    const updatedPost = await this.postsService.updatePost(
-      updatePostDto,
-      postId,
-      userId,
-    );
+    const userId = (req.user as any).userId;
+    const post = await this.postsService.updatePost(dto, postId, userId);
     return {
       status: 'success',
       message: '게시물이 성공적으로 수정되었습니다.',
-      data: updatedPost,
+      data: post,
     };
   }
 
   @Delete(':postId')
+  @ApiPosts.delete()
   async deletePost(
     @Param('postId', ParseIntPipe) postId: number,
     @Req() req: Request,
   ) {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
+    const userId = (req.user as any).userId;
     await this.postsService.deletePost(postId, userId);
     return {
       status: 'success',
