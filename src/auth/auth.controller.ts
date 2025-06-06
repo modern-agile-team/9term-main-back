@@ -3,14 +3,25 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignupRequestDto } from './dto/signup-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiBadRequestResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
+
+import { signupSwagger, loginSwagger } from './auth.swagger';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
   @Post('signup')
+  @ApiBody(signupSwagger.apiBody)
+  @ApiOperation({ summary: '회원가입' })
+  @ApiCreatedResponse(signupSwagger.apiCreatedResponse)
+  @ApiBadRequestResponse(signupSwagger.apiBadRequestResponse)
   async signup(@Body() signupRequestDto: SignupRequestDto) {
     await this.authService.signup(signupRequestDto);
     return {
@@ -21,6 +32,10 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiBody(loginSwagger.apiBody)
+  @ApiOperation({ summary: '로그인' })
+  @ApiCreatedResponse(loginSwagger.apiCreatedResponse)
+  @ApiBadRequestResponse(loginSwagger.apiBadRequestResponse)
   async login(
     @Body() loginRequestDto: LoginRequestDto,
     @Res({ passthrough: true }) res: Response,
