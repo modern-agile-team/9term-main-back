@@ -7,7 +7,7 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
-import { UserProfileDto, UserProfileResponseDto } from './user.dto';
+import { UserProfileResponseDto } from './user.dto';
 
 @ApiTags('User')
 @Controller('users')
@@ -48,15 +48,13 @@ export class UserController {
       ],
     },
   })
-  getProfile(@Req() req) {
-    const userProfile = new UserProfileDto();
-    userProfile.name = req.user.name;
-
-    const response = new UserProfileResponseDto();
-    response.status = 'success';
-    response.message = '내 정보 조회 성공';
-    response.data = userProfile;
-
-    return response;
+  getProfile(@Req() req): UserProfileResponseDto {
+    return {
+      status: 'success',
+      message: '내 정보 조회 성공',
+      data: {
+        name: req.user.name,
+      },
+    };
   }
 }
