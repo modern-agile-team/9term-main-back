@@ -1,15 +1,32 @@
-import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.useGlobalPipes(new ValidationPipe());
 
   app.use(cookieParser());
+
+  // CORS 설정
+  const corsOriginsString = configService.get<string>('CORS_ORIGIN');
+  const allowedOrigins = corsOriginsString
+    ? corsOriginsString
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0)
+    : [];
+
+  app.enableCors({
+    origin: allowedOrigins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE, OPTIONS',
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('모동구')
