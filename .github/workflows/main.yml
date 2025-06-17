@@ -1,0 +1,97 @@
+name: modgu cicd
+
+on:
+  push:
+    branches:
+      - main 
+      - develop 
+  pull_request:
+    branches:
+      - main 
+      - develop
+
+jobs:
+  build-and-push-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code 
+        uses: actions/checkout@v4 
+
+      - name: Set up Node.js 
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' 
+
+      - name: Install Dependencies 
+        run: npm ci 
+
+      - name: Lint & Build
+        run: npm run lint && npm run build
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }} 
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags:
+            ${{ secrets.DOCKER_USERNAME }}/modgu:latest
+            ${{ secrets.DOCKER_USERNAME }}/modgu:${{ github.sha }}
+ 
+  ## deploy
+  deploy-to-ec2-self-hosted: 
+    needs: build-and-push-docker # build-and-push-docker 작업이 완료된 후 실행
+    runs-on: [self-hosted, modgu-back-runner, linux, x64]
+
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu         
+      APP_PORT: 8081 # EC2 외부에서 접근할 포트
+      CONTAINER_PORT: 3000 # 컨테이너 포트
+      CONTAINER_NAME: modgu # 컨테이너 이름
+
+    steps:
+      - name: Deploy to EC2 and Run Docker Container
+        run: |
+          echo "최신 도커 이미지 Pull 중..."
+          docker pull $DOCKER_IMAGE_NAME:latest
+
+          echo "기존 컨테이너 중지 및 제거 중..." 
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
+
+          echo "새로운 컨테이너 시작 중..."
+          docker run -d --restart unless-stopped --name $CONTAINER_NAME \
+            -p $APP_PORT:$CONTAINER_PORT \
+            -v $HOME/9term-main-back/certbot/www:/var/www/certbot \
+            -v $HOME/9term-main-back/certbot/conf:/etc/letsencrypt \
+            $DOCKER_IMAGE_NAME:latest
+
+          echo "Docker 컨테이너가 성공적으로 시작되었습니다."
+
+      - name: Simple Integration Test # 통합 테스트
+        run: |
+          echo "--- 컨테이너 상태 확인 중 ---"
+          sleep 20
+
+          CONTAINER_STATUS=$(docker ps --filter "name=$CONTAINER_NAME" --format '{{.Status}}')
+
+          echo "컨테이너 상태: $CONTAINER_STATUS"
+
+          if [[ $CONTAINER_STATUS == *"Up"* ]]; then
+              echo "컨테이너가 정상적으로 실행 중입니다."
+          else
+              echo "컨테이너가 실행 중이 아닙니다. 다시 확인하세요."
+              exit 1
+          fi

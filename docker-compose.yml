@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+
+  # 1. NestJS 
+  modonggu-backend:
+    container_name: modonggu-backend
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: kangsengmin/modgu:latest
+    ports:
+      - "8081:3000" # EC2 외부에서 접근할 포트
+    expose: 
+      - "3000"
+    env_file: 
+      - ./.env
+    restart: unless-stopped
+    networks:
+      - modonggu-net
+ 
+  # 2. Nginx 
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - modonggu-backend
+    restart: unless-stopped
+    networks:
+      - modonggu-net
+    
+  # 3. Certbot
+  certbot:
+    container_name: certbot
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on: 
+      - nginx
+    entrypoint: >
+      /bin/sh -c "
+        certbot certonly --webroot -w /var/www/certbot -d api.modonggu.site \
+          --email kangsengmin@naver.com --agree-tos --no-eff-email --rsa-key-size 4096 && \
+        while :; do certbot renew --webroot -w /var/www/certbot && sleep 12h; done
+      "
+
+    networks:
+      - modonggu-net 
+networks:
+  modonggu-net:
+    driver: bridge
