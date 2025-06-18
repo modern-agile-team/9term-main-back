@@ -1,10 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
+import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
+import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
 @Injectable()
 export class CustomJwtAuthGuard extends AuthGuard('jwt') {
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: any, user: any, info: any): any {
     if (err || !user) {
       if (
         err instanceof TokenExpiredError ||
@@ -22,6 +23,6 @@ export class CustomJwtAuthGuard extends AuthGuard('jwt') {
         throw new UnauthorizedException('인증에 실패했습니다.');
       }
     }
-    return user;
+    return user as AuthenticatedUser;
   }
 }

@@ -1,10 +1,10 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { SignupRequestDto } from './dto/signup-request.dto';
-import { LoginRequestDto } from './dto/login-request.dto';
-import { UserRepository } from './user.repository';
-import { JwtService } from '@nestjs/jwt';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { LoginRequestDto } from './dto/login-request.dto';
+import { SignupRequestDto } from './dto/signup-request.dto';
 import { PasswordEncoderService } from './password-encoder.service';
+import { UserRepository } from './user.repository';
 
 @Injectable()
 export class AuthService {
@@ -46,6 +46,7 @@ export class AuthService {
     );
 
     if (!user) {
+      console.log('user', user);
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
 
