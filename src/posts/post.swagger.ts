@@ -1,13 +1,12 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
   getSchemaPath,
-  ApiExtraModels,
 } from '@nestjs/swagger';
-import { ResPostDto } from './dto/res-post.dto';
 import { ApiResponseDto } from './dto/api-response.dto';
+import { ResPostDto } from './dto/res-post.dto';
 
 /**
  * 인증 실패 공통 응답

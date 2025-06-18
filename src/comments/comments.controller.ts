@@ -1,10 +1,21 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-
 
 @UseGuards(CustomJwtAuthGuard)
 @Controller('groups/:groupId/posts/:postId/comments')
@@ -20,7 +31,12 @@ export class CommentsController {
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const created = await this.commentsService.createComment(createCommentDto, userId, postId, groupId);
+    const created = await this.commentsService.createComment(
+      createCommentDto,
+      userId,
+      postId,
+      groupId,
+    );
     return {
       status: 'success',
       message: '댓글이 성공적으로 생성되었습니다.',
@@ -34,7 +50,11 @@ export class CommentsController {
     @Param('postId', ParseIntPipe) postId: number,
     @Query('parentId', new ParseIntPipe({ optional: true })) parentId?: number,
   ) {
-    const comments = await this.commentsService.getCommentsByPost(postId, groupId, parentId);
+    const comments = await this.commentsService.getCommentsByPost(
+      postId,
+      groupId,
+      parentId,
+    );
     return {
       status: 'success',
       message: '댓글이 성공적으로 조회되었습니다.',
@@ -52,7 +72,13 @@ export class CommentsController {
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const updated = await this.commentsService.updateComment(id, updateCommentDto, userId, groupId, postId);
+    const updated = await this.commentsService.updateComment(
+      id,
+      updateCommentDto,
+      userId,
+      groupId,
+      postId,
+    );
     return {
       status: 'success',
       message: '댓글이 성공적으로 수정되었습니다.',
@@ -69,7 +95,12 @@ export class CommentsController {
   ) {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const deleted = await this.commentsService.deleteComment(id, userId, groupId, postId);
+    const deleted = await this.commentsService.deleteComment(
+      id,
+      userId,
+      groupId,
+      postId,
+    );
     return {
       status: 'success',
       message: '댓글이 성공적으로 삭제되었습니다.',

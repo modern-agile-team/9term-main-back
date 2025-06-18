@@ -12,9 +12,12 @@ async function bootstrap() {
 
   // CORS 설정
   const corsOriginsString = configService.get<string>('CORS_ORIGIN');
-  const allowedOrigins = corsOriginsString ? corsOriginsString.split(',')
-  .map(origin => origin.trim()) 
-  .filter(origin => origin.length > 0) : [];
+  const allowedOrigins = corsOriginsString
+    ? corsOriginsString
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0)
+    : [];
 
   app.enableCors({
     origin: allowedOrigins,
