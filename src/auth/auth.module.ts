@@ -4,8 +4,10 @@ import { AuthController } from './auth.controller';
 import { UserRepository } from './user.repository';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtStrategy } from './jwt.strategy';
+import { JwtStrategy } from './access.strategy';
+import { JwtRefreshStrategy } from './refresh.strategy';
 import { PasswordEncoderService } from './password-encoder.service';
+import { JwtRefreshGuard } from './guards/refresh.guard';
 
 @Module({
   imports: [
@@ -21,7 +23,14 @@ import { PasswordEncoderService } from './password-encoder.service';
       }),
     }),
   ],
-  providers: [AuthService, UserRepository, JwtStrategy, PasswordEncoderService],
+  providers: [
+    AuthService,
+    UserRepository,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    PasswordEncoderService,
+    JwtRefreshGuard,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

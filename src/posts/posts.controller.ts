@@ -14,7 +14,7 @@ import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Request } from 'express';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { ApiPosts } from './post.swagger';
 
 @Controller('groups/:groupId/posts')
