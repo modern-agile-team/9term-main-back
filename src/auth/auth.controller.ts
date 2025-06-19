@@ -4,17 +4,28 @@ import { AuthService } from './auth.service';
 import { SignupRequestDto } from './dto/signup-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
-  private readonly COOKIE_OPTIONS = {
-    httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-    secure: process.env.COOKIE_SECURE === 'true',
-    sameSite: process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none',
-    maxAge: Number(process.env.COOKIE_MAX_AGE) || 7 * 24 * 60 * 60 * 1000,
-  };
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  constructor(private readonly authService: AuthService) {}
+  private getCookieOptions() {
+    return {
+      httpOnly: this.configService.get('COOKIE_HTTP_ONLY') === 'true',
+      secure: this.configService.get('COOKIE_SECURE') === 'true',
+      sameSite: this.configService.get('COOKIE_SAME_SITE') as
+        | 'strict'
+        | 'lax'
+        | 'none',
+      maxAge:
+        Number(this.configService.get('COOKIE_MAX_AGE')) ||
+        7 * 24 * 60 * 60 * 1000,
+    };
+  }
 
   @Post('signup')
   async signup(@Body() signupRequestDto: SignupRequestDto) {
@@ -34,7 +45,7 @@ export class AuthController {
     const { accessToken, refreshToken } =
       await this.authService.login(loginRequestDto);
 
-    res.cookie('refresh_token', refreshToken, this.COOKIE_OPTIONS);
+    res.cookie('refresh_token', refreshToken, this.getCookieOptions());
 
     return {
       status: 'success',
@@ -64,7 +75,7 @@ export class AuthController {
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refreshAccessToken(refreshToken);
 
-    res.cookie('refresh_token', newRefreshToken, this.COOKIE_OPTIONS);
+    res.cookie('refresh_token', newRefreshToken, this.getCookieOptions());
 
     return {
       status: 'success',

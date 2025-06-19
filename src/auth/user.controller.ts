@@ -54,6 +54,7 @@ export class UserController {
       message: '내 정보 조회 성공',
       data: {
         name: req.user.name,
+        userName: req.user.userName,
       },
     };
   }
