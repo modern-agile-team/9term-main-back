@@ -6,7 +6,7 @@ import {
   ApiUnauthorizedResponse,
   ApiOkResponse,
 } from '@nestjs/swagger';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { UserProfileResponseDto } from './user.dto';
 
 @ApiTags('User')
@@ -54,6 +54,7 @@ export class UserController {
       message: '내 정보 조회 성공',
       data: {
         name: req.user.name,
+        userName: req.user.userName,
       },
     };
   }
