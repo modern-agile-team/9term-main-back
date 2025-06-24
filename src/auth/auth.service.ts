@@ -51,7 +51,7 @@ export class AuthService {
     if (!isMatch) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
-    const payload = { sub: user.userName, name: user.name };
+    const payload = { sub: user.id, userName: user.userName, name: user.name };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
       expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
@@ -79,7 +79,8 @@ export class AuthService {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }
       const newAccessPayload = {
-        sub: user.userName,
+        sub: user.id,
+        userName: user.userName,
         name: user.name,
       };
       const accessToken = this.jwtService.sign(newAccessPayload, {
