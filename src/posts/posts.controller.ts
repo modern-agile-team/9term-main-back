@@ -12,14 +12,14 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
-import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ApiPosts } from './post.swagger';
 import { PostsService } from './posts.service';
 
 interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
+  user: AuthenticatedUserResponse;
 }
 
 @Controller('groups/:groupId/posts')

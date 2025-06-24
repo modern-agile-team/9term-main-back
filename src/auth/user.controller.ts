@@ -7,11 +7,11 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
-import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { AuthenticatedUserResponse } from './interfaces/authenticated-user-response.interface';
 import { UserProfileResponseDto } from './user.dto';
 
 interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
+  user: AuthenticatedUserResponse;
 }
 
 @ApiTags('User')
@@ -59,6 +59,7 @@ export class UserController {
       message: '내 정보 조회 성공',
       data: {
         name: req.user.name,
+        userName: req.user.userName,
       },
     };
   }

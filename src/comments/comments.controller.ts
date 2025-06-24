@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';

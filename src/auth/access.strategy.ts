@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AuthenticatedUser } from './interfaces/authenticated-user.interface'; // 인증된 사용자 인터페이스를 가져온다.
-import { JwtPayload } from './interfaces/jwt-payload.interface'; // JWT 페이로드 인터페이스를 가져온다.
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,9 +18,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   validate(payload: JwtPayload): AuthenticatedUser {
     return {
-      userId: payload.sub,
-      username: payload.username,
+      userName: payload.userName,
       name: payload.name,
-    }; // payload는 JWT 토큰의 페이로드 부분이다.
+    };
   }
 }

@@ -3,12 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
   app.useGlobalPipes(new ValidationPipe());
+
+  app.use(cookieParser());
 
   // CORS 설정
   const corsOriginsString = configService.get<string>('CORS_ORIGIN');
