@@ -1,13 +1,18 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
-  ApiOkResponse,
 } from '@nestjs/swagger';
-import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { AuthenticatedUserResponse } from './interfaces/authenticated-user-response.interface';
 import { UserProfileResponseDto } from './user.dto';
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUserResponse;
+}
 
 @ApiTags('User')
 @Controller('users')
@@ -48,7 +53,7 @@ export class UserController {
       ],
     },
   })
-  getProfile(@Req() req): UserProfileResponseDto {
+  getProfile(@Req() req: AuthenticatedRequest): UserProfileResponseDto {
     return {
       status: 'success',
       message: '내 정보 조회 성공',

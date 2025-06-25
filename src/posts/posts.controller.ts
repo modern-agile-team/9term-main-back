@@ -1,21 +1,26 @@
 import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Delete,
-  Param,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
   Req,
   UseGuards,
-  ParseIntPipe,
 } from '@nestjs/common';
-import { PostsService } from './posts.service';
+import { Request } from 'express';
+import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { Request } from 'express';
-import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { ApiPosts } from './post.swagger';
+import { PostsService } from './posts.service';
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUserResponse;
+}
 
 @Controller('groups/:groupId/posts')
 @UseGuards(CustomJwtAuthGuard)
@@ -27,9 +32,9 @@ export class PostsController {
   async createPost(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() dto: CreatePostDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = req.user.userId;
     const post = await this.postsService.createPost(dto, groupId, userId);
     return {
       status: 'success',
@@ -65,9 +70,9 @@ export class PostsController {
   async updatePost(
     @Param('postId', ParseIntPipe) postId: number,
     @Body() dto: UpdatePostDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = req.user.userId;
     const post = await this.postsService.updatePost(dto, postId, userId);
     return {
       status: 'success',
@@ -80,9 +85,9 @@ export class PostsController {
   @ApiPosts.delete()
   async deletePost(
     @Param('postId', ParseIntPipe) postId: number,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = req.user.userId;
     await this.postsService.deletePost(postId, userId);
     return {
       status: 'success',
