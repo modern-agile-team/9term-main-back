@@ -1,5 +1,5 @@
-import { SignupRequestDto } from './dto/signup-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
+import { SignupRequestDto } from './dto/signup-request.dto';
 
 export const signupSwagger = {
   apiBody: {
