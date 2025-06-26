@@ -16,12 +16,14 @@ export class MembersService {
       },
     });
 
-    return members.map((member) => ({
-      userId: member.userId,
-      name: member.user.name,
-      role: member.role,
-      joinedAt: member.createdAt,
-    }));
+    return members
+      .filter((member) => member.role !== 'admin')
+      .map((member) => ({
+        userId: member.userId,
+        name: member.user.name,
+        role: member.role,
+        joinedAt: member.createdAt,
+      }));
   }
 
   async getGroupMember(groupId: number, userId: number) {
@@ -36,8 +38,7 @@ export class MembersService {
     });
   }
 
-  // manager만 멤버 삭제 가능
-  async removeMember(
+  async validateRemoveMember(
     groupId: number,
     targetUserId: number,
     requesterUserId: number,
@@ -67,6 +68,20 @@ export class MembersService {
     if (!targetMember) {
       throw new ForbiddenException('삭제할 멤버가 존재하지 않습니다.');
     }
+
+    return targetMember;
+  }
+
+  async removeMember(
+    groupId: number,
+    targetUserId: number,
+    requesterUserId: number,
+  ) {
+    const targetMember = await this.validateRemoveMember(
+      groupId,
+      targetUserId,
+      requesterUserId,
+    );
 
     return this.prisma.userGroup.delete({
       where: {

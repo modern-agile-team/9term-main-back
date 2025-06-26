@@ -10,19 +10,20 @@ import {
 import { MembersService } from './member.service';
 import { GroupManagerGuard } from './guards/group-manager.guard';
 import { GroupMemberGuard } from './guards/group-member.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 
-@Controller('groups/:groupId/memberlist')
+@Controller('groups/:groupId/members')
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
-  @UseGuards(GroupMemberGuard)
+  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get()
   async getMemberList(@Param('groupId', ParseIntPipe) groupId: number) {
     return this.membersService.getMemberList(groupId);
   }
 
   // 그룹 멤버 조회 (멤버만 조회 가능)
-  @UseGuards(GroupMemberGuard)
+  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get(':userId')
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -32,7 +33,7 @@ export class MembersController {
   }
 
   // 그룹 매니저만 멤버 삭제 가능
-  @UseGuards(GroupManagerGuard)
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @Delete(':userId')
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,

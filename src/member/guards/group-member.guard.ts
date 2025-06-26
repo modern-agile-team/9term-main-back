@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { MembersService } from '../member.service';
 
@@ -19,11 +20,13 @@ export class GroupMemberGuard implements CanActivate {
       throw new ForbiddenException('로그인이 필요합니다.');
     }
     if (!groupId) {
-      throw new ForbiddenException('그룹 정보가 올바르지 않습니다.');
+      throw new InternalServerErrorException('groupId 값이 필요합니다.');
     }
     const member = await this.membersService.getGroupMember(groupId, userId);
     if (!member) {
-      throw new ForbiddenException('이 그룹에 가입된 멤버만 조회할 수 있습니다.');
+      throw new ForbiddenException(
+        '이 그룹에 가입된 멤버만 조회할 수 있습니다.',
+      );
     }
 
     return true;
