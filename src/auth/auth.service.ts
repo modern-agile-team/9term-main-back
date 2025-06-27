@@ -5,6 +5,8 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { SignupRequestDto } from './dto/signup-request.dto';
 import { PasswordEncoderService } from './password-encoder.service';
 import { UserRepository } from './user.repository';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 
 @Injectable()
 export class AuthService {
@@ -56,7 +58,7 @@ export class AuthService {
       secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
       expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     });
-    const refreshPayload = { sub: user.userName };
+    const refreshPayload = { sub: user.id, userName: user.userName };
     const refreshToken = this.jwtService.sign(refreshPayload, {
       secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.getOrThrow<string>(
@@ -71,10 +73,10 @@ export class AuthService {
     refreshToken: string;
   }> {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      const user = await this.userRepository.findByUserName(payload.sub);
+      const user = await this.userRepository.findByUserName(payload.userName);
       if (!user) {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }
@@ -100,8 +102,11 @@ export class AuthService {
         accessToken,
         refreshToken: newRefreshToken,
       };
-    } catch (e) {
-      throw new BadRequestException('유효하지 않은 Refresh Token입니다.');
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        console.log(`에러 발생: ${e.message}`, e.stack);
+      }
+      throw new InternalServerErrorException();
     }
   }
 }

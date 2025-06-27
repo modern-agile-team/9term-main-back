@@ -7,10 +7,12 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { MembersService } from './member.service';
 import { GroupManagerGuard } from './guards/group-manager.guard';
 import { GroupMemberGuard } from './guards/group-member.guard';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Controller('groups/:groupId/members')
 export class MembersController {
@@ -38,9 +40,10 @@ export class MembersController {
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('userId', ParseIntPipe) userId: number,
-    @Req() req,
+    @Req() req: Request,
   ) {
-    const requesterUserId = req.user.userId;
+    const requesterUserId = (req.user as AuthenticatedUser)?.userId;
+
     return this.membersService.removeMember(groupId, userId, requesterUserId);
   }
 }
