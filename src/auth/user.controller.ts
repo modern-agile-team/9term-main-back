@@ -6,7 +6,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from './guards/access.guard';
 import { AuthenticatedUserResponse } from './interfaces/authenticated-user-response.interface';
 import { UserProfileResponseDto } from './user.dto';
 

@@ -7,12 +7,14 @@ import { UserController } from './auth/user.controller';
 import { CommentsModule } from './comments/comments.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { MemberModule } from './member/member.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     PostsModule,
+    MemberModule,
     CommentsModule,
     ConfigModule.forRoot({
       isGlobal: true,

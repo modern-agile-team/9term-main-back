@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
