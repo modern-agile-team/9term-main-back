@@ -12,10 +12,15 @@ import {
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { Request } from 'express';
-import { CustomJwtAuthGuard } from 'src/auth/guards/custom-jwt-auth.guard';
+import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUserResponse;
+}
 
 @Controller('groups')
 export class GroupsController {
@@ -25,9 +30,9 @@ export class GroupsController {
   @UseGuards(CustomJwtAuthGuard)
   async createGroup(
     @Body() createGroupDto: CreateGroupDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = req.user.userId;
     const group = await this.groupsService.createGroup(createGroupDto, userId);
     return {
       status: 'success',
@@ -50,9 +55,9 @@ export class GroupsController {
   @UseGuards(OptionalJwtAuthGuard)
   async getGroupWithJoinStatus(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any)?.userId;
+    const userId = req.user?.userId;
     const groupData = await this.groupsService.getGroupWithJoinStatus(
       groupId,
       userId,
@@ -69,9 +74,9 @@ export class GroupsController {
   @UseGuards(CustomJwtAuthGuard)
   async joinGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = req.user.userId;
 
     const joinGroupDto: JoinGroupDto = {
       userId,
@@ -93,10 +98,9 @@ export class GroupsController {
   async updateGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() updateGroupDto: UpdateGroupDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const userId = (req.user as any).userId;
-
+    const userId = req.user.userId;
     const updatedGroup = await this.groupsService.updateGroup(
       groupId,
       userId,
