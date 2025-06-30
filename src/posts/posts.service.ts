@@ -54,7 +54,7 @@ export class PostsService {
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       user: post.user,
-      commentsCount: post._count.comments, // ✅ 댓글 수 포함
+      commentsCount: post._count.comments,
     };
   }
 
