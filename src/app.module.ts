@@ -8,6 +8,7 @@ import { CommentsModule } from './comments/comments.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { MemberModule } from './member/member.module';
+import { GroupsModule } from './groups/groups.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { MemberModule } from './member/member.module';
     PostsModule,
     MemberModule,
     CommentsModule,
+    GroupsModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
