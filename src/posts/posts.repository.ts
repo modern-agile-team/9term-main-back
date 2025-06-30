@@ -23,7 +23,13 @@ export class PostsRepository {
       include: {
         user: {
           select: {
+            id: true,
             name: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
           },
         },
       },
@@ -36,13 +42,18 @@ export class PostsRepository {
       include: {
         user: {
           select: {
+            id: true,
             name: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
           },
         },
       },
     });
   }
-
   async updatePostById(id: number, data: { title?: string; content?: string }) {
     return await this.prisma.post.update({
       where: { id },

@@ -32,12 +32,22 @@ async function bootstrap() {
     .setTitle('모동구')
     .setDescription('모동구 API 명세서')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+      },
+      'access-token',
+    )
     .setTermsOfService('https://github.com/modern-agile-team/9term-main-back')
     .addTag('모동구')
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('api', app, documentFactory);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }
