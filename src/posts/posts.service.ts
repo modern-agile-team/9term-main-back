@@ -35,7 +35,7 @@ export class PostsService {
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       user: post.user,
-      commentsCount: post._count.comments, // 추가된 부분
+      commentsCount: post._count.comments,
     }));
   }
 
