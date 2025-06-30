@@ -1,5 +1,6 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiExtraModels,
   ApiOperation,
   ApiResponse,
@@ -85,6 +86,7 @@ function ApiArrayResponseWithData<T extends Type<any>>(
 export const ApiPosts = {
   create: () =>
     applyDecorators(
+      ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 생성' }),
       ApiResponseWithData(
         ResPostDto,
@@ -109,6 +111,7 @@ export const ApiPosts = {
 
   getAll: () =>
     applyDecorators(
+      ApiBearerAuth('access-token'),
       ApiOperation({ summary: '모든 게시물 조회' }),
       ApiArrayResponseWithData(
         ResPostDto,
@@ -120,6 +123,7 @@ export const ApiPosts = {
 
   getOne: () =>
     applyDecorators(
+      ApiBearerAuth('access-token'),
       ApiOperation({ summary: '특정 게시물 조회' }),
       ApiResponseWithData(ResPostDto, 200, '게시물을 성공적으로 가져왔습니다.'),
       ApiResponse({
@@ -140,6 +144,7 @@ export const ApiPosts = {
 
   update: () =>
     applyDecorators(
+      ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 수정' }),
       ApiResponseWithData(
         ResPostDto,
@@ -164,6 +169,7 @@ export const ApiPosts = {
 
   delete: () =>
     applyDecorators(
+      ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 삭제' }),
       ApiResponse({
         status: 200,
