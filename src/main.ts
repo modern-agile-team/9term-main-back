@@ -1,6 +1,6 @@
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
@@ -11,9 +11,11 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe());
 
+  const reflector = app.get<Reflector>(Reflector);
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
+
   app.use(cookieParser());
 
-  // CORS 설정
   const corsOriginsString = configService.get<string>('CORS_ORIGIN');
   const allowedOrigins = corsOriginsString
     ? corsOriginsString
@@ -24,7 +26,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: allowedOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE, OPTIONS',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
@@ -35,10 +37,10 @@ async function bootstrap() {
     .setTermsOfService('https://github.com/modern-agile-team/9term-main-back')
     .addTag('모동구')
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('api', app, documentFactory);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

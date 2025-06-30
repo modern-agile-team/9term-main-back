@@ -3,18 +3,30 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
-import { GroupsRepository } from './groups.repository';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GroupsRepository } from './groups.repository';
+import { plainToInstance } from 'class-transformer';
+import { GroupResponseDto } from './dto/group-response.dto';
+import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
+import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { GroupUserResponseDto } from './dto/group-user-response.dto';
+import {
+  CreateGroupInput,
+  GroupUserInput,
+  UpdateGroupInput,
+} from './types/group-inputs';
 
 @Injectable()
 export class GroupsService {
   constructor(private readonly groupsRepository: GroupsRepository) {}
 
-  async createGroup(createGroupDto: CreateGroupDto, userId: number) {
+  async createGroup(
+    createGroupDto: CreateGroupDto,
+    userId: number,
+  ): Promise<GroupResponseDto> {
     const existingGroup = await this.groupsRepository.findGroupByName(
       createGroupDto.name,
     );
@@ -22,82 +34,118 @@ export class GroupsService {
       throw new ConflictException('이미 존재하는 그룹 이름입니다.');
     }
 
-    const groupData = {
-      name: createGroupDto.name,
-      description: createGroupDto.description,
+    const createGroupData: CreateGroupInput = {
+      ...createGroupDto,
       userId,
     };
 
     const createdGroup =
-      await this.groupsRepository.createGroupWithAdmin(groupData);
-
-    return createdGroup;
+      await this.groupsRepository.createGroupWithAdmin(createGroupData);
+    return plainToInstance(GroupResponseDto, createdGroup, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  async findAllGroups() {
+  async findAllGroups(): Promise<GroupWithMemberCountDto[]> {
     const groups = await this.groupsRepository.findAllGroups();
-    return groups;
+
+    const groupsWithCounts = await Promise.all(
+      groups.map(async (group) => {
+        const memberCount = await this.groupsRepository.getMemberCount(
+          group.id,
+        );
+        return plainToInstance(
+          GroupWithMemberCountDto,
+          {
+            ...group,
+            memberCount,
+          },
+          {
+            excludeExtraneousValues: true,
+          },
+        );
+      }),
+    );
+
+    return groupsWithCounts;
   }
 
-  async getGroupWithJoinStatus(groupId: number, userId?: number) {
+  async getGroupWithJoinStatus(
+    groupId: number,
+    userId?: number,
+  ): Promise<GroupJoinStatusDto> {
     const group = await this.groupsRepository.findGroupById(groupId);
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    const isLoggedIn = !!userId;
-
-    if (!isLoggedIn) {
-      return {
-        id: group.id,
-        name: group.name,
-        description: group.description,
-        createdAt: group.createdAt,
-        isLoggedIn: false,
-        isJoined: false,
-        role: null,
-      };
+    if (!userId) {
+      return plainToInstance(
+        GroupJoinStatusDto,
+        {
+          isJoined: false,
+          role: null,
+        },
+        {
+          excludeExtraneousValues: true,
+        },
+      );
     }
 
-    const userGroup = await this.groupsRepository.findUserGroup(
+    const userGroup = await this.groupsRepository.findGroupUser(
       groupId,
       userId,
     );
 
-    return {
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      createdAt: group.createdAt,
-      isLoggedIn: true,
-      isJoined: !!userGroup,
-      role: userGroup?.role ?? null,
-    };
+    return plainToInstance(
+      GroupJoinStatusDto,
+      {
+        isJoined: !!userGroup,
+        role: userGroup?.role ?? null,
+      },
+      {
+        excludeExtraneousValues: true,
+      },
+    );
   }
 
-  async joinGroup(joinGroupDto: JoinGroupDto) {
-    const existing = await this.groupsRepository.findUserGroup(
-      joinGroupDto.groupId,
-      joinGroupDto.userId,
+  async joinGroup(joinGroupDto: JoinGroupDto): Promise<GroupUserResponseDto> {
+    const { groupId, userId } = joinGroupDto;
+
+    const existingMembership = await this.groupsRepository.findGroupUser(
+      groupId,
+      userId,
     );
-    if (existing) {
-      throw new BadRequestException('이미 이 그룹에 가입되어 있습니다.');
+
+    if (existingMembership) {
+      throw new ConflictException('이미 이 그룹에 가입되어 있습니다.');
     }
 
-    return await this.groupsRepository.joinGroup(joinGroupDto);
+    const groupUserData: GroupUserInput = {
+      userId,
+      groupId,
+      role: 'member',
+    };
+
+    const createdGroupUser =
+      await this.groupsRepository.createGroupUser(groupUserData);
+
+    return plainToInstance(GroupUserResponseDto, createdGroupUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async updateGroup(
     groupId: number,
     userId: number,
     updateGroupDto: UpdateGroupDto,
-  ) {
+  ): Promise<GroupResponseDto> {
     const group = await this.groupsRepository.findGroupById(groupId);
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    const userGroup = await this.groupsRepository.findUserGroup(
+    const userGroup = await this.groupsRepository.findGroupUser(
       groupId,
       userId,
     );
@@ -105,11 +153,16 @@ export class GroupsService {
       throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
     }
 
+    const updateGroupData: UpdateGroupInput = {
+      ...updateGroupDto,
+    };
+
     const updatedGroup = await this.groupsRepository.updateGroupById(
       groupId,
-      updateGroupDto,
+      updateGroupData,
     );
-
-    return updatedGroup;
+    return plainToInstance(GroupResponseDto, updatedGroup, {
+      excludeExtraneousValues: true,
+    });
   }
 }

@@ -1,25 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { JoinGroupDto } from './dto/join-group.dto';
-import { UpdateGroupDto } from './dto/update-group.dto';
+import {
+  CreateGroupInput,
+  GroupUserInput,
+  UpdateGroupInput,
+} from './types/group-inputs';
+import { Group, UserGroup } from '@prisma/client';
 
 @Injectable()
 export class GroupsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findGroupByName(name: string) {
-    return await this.prisma.group.findFirst({
-      where: { name },
-      select: { id: true },
-    });
+  findGroupByName(name: string): Promise<Group | null> {
+    return this.prisma.group.findFirst({ where: { name } });
   }
 
-  async createGroupWithAdmin(data: {
-    name: string;
-    description: string;
-    userId: number;
-  }) {
-    return await this.prisma.$transaction(async (tx) => {
+  createGroupWithAdmin(data: CreateGroupInput): Promise<Group> {
+    return this.prisma.$transaction(async (tx) => {
       const group = await tx.group.create({
         data: {
           name: data.name,
@@ -39,61 +36,38 @@ export class GroupsRepository {
     });
   }
 
-  async findAllGroups() {
-    return await this.prisma.group.findMany({
+  findAllGroups(): Promise<Group[]> {
+    return this.prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findGroupById(groupId: number) {
-    const group = await this.prisma.group.findUnique({
+  findGroupById(groupId: number): Promise<Group | null> {
+    return this.prisma.group.findUnique({
       where: { id: groupId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-      },
     });
+  }
 
-    if (!group) {
-      return null;
-    }
-
-    const memberCount = await this.prisma.userGroup.count({
+  getMemberCount(groupId: number): Promise<number> {
+    return this.prisma.userGroup.count({
       where: { groupId },
     });
-
-    return {
-      ...group,
-      memberCount,
-    };
   }
 
-  async findUserGroup(groupId: number, userId: number) {
-    return await this.prisma.userGroup.findFirst({
+  findGroupUser(groupId: number, userId: number): Promise<UserGroup | null> {
+    return this.prisma.userGroup.findFirst({
       where: { groupId, userId },
-      select: { role: true },
     });
   }
 
-  async joinGroup(joinGroupData: JoinGroupDto) {
-    return await this.prisma.userGroup.create({
-      data: {
-        userId: joinGroupData.userId,
-        groupId: joinGroupData.groupId,
-        role: joinGroupData.role,
-      },
-    });
+  createGroupUser(data: GroupUserInput): Promise<UserGroup> {
+    return this.prisma.userGroup.create({ data });
   }
 
-  async updateGroupById(groupId: number, updateGroupDto: UpdateGroupDto) {
-    return await this.prisma.group.update({
+  updateGroupById(groupId: number, data: UpdateGroupInput): Promise<Group> {
+    return this.prisma.group.update({
       where: { id: groupId },
-      data: {
-        name: updateGroupDto.name,
-        description: updateGroupDto.description,
-      },
+      data,
     });
   }
 }
