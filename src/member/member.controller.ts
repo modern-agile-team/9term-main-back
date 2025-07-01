@@ -6,6 +6,7 @@ import {
   Req,
   Delete,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { MembersService } from './member.service';
@@ -43,7 +44,9 @@ export class MembersController {
     @Req() req: Request,
   ) {
     const requesterUserId = (req.user as AuthenticatedUser)?.userId;
-
-    return this.membersService.removeMember(groupId, userId, requesterUserId);
+    if (userId === requesterUserId) {
+      throw new ForbiddenException('자신을 삭제할 수 없습니다.');
+    }
+    return this.membersService.processRemoveMember(groupId, userId);
   }
 }

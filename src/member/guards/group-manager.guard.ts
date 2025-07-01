@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { MembersService } from '../member.service';
 import { Request } from 'express';
-import { GroupMember } from '../interfaces/member.interface';
+import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class GroupManagerGuard implements CanActivate {
@@ -16,11 +16,9 @@ export class GroupManagerGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const groupId: number = Number(request.params.groupId);
-    const userId: number | undefined = (request.user as GroupMember)?.userId;
+    const user = request.user as AuthenticatedUser;
+    const userId: number = user.userId;
 
-    if (!userId) {
-      throw new ForbiddenException('로그인이 필요합니다.');
-    }
     if (!groupId) {
       throw new InternalServerErrorException('groupId 값이 필요합니다.');
     }
