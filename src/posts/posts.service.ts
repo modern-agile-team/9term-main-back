@@ -26,7 +26,17 @@ export class PostsService {
   }
 
   async getAllPosts(groupId: number) {
-    return await this.postsRepository.findPostsByGroupId(groupId);
+    const posts = await this.postsRepository.findPostsByGroupId(groupId);
+
+    return posts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      user: post.user,
+      commentsCount: post._count.comments,
+    }));
   }
 
   async getPostById(id: number) {
@@ -34,7 +44,18 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
     }
-    return post;
+
+    return {
+      id: post.id,
+      userId: post.userId,
+      groupId: post.groupId,
+      title: post.title,
+      content: post.content,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      user: post.user,
+      commentsCount: post._count.comments,
+    };
   }
 
   async updatePost(updatePostDto: UpdatePostDto, id: number, userId: number) {

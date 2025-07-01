@@ -5,33 +5,27 @@ export class ResPostDto {
   @ApiProperty({ example: 6, description: '게시물 ID' })
   id: number;
 
-  @ApiProperty({ example: 29, description: '작성자 사용자 ID' })
-  userId: number;
-
-  @ApiProperty({ example: 1, description: '게시물이 속한 그룹 ID' })
+  @ApiProperty({ example: 1, description: '그룹 ID' })
   groupId: number;
 
-  @ApiProperty({ example: '수정테스트!!', description: '게시물 제목' })
+  @ApiProperty({ example: '제목', description: '게시물 제목' })
   title: string;
 
-  @ApiProperty({ example: '수정테스트!!', description: '게시물 내용' })
+  @ApiProperty({ example: '본문', description: '게시물 내용' })
   content: string;
 
-  @ApiProperty({
-    example: '2025-05-16T02:35:57.282Z',
-    description: '게시물 생성 일자 (ISO 8601 형식)',
-  })
+  @ApiProperty({ example: '2025-06-27T05:25:37.078Z', description: '작성일시' })
   createdAt: Date;
 
-  @ApiProperty({
-    example: '2025-05-16T03:04:18.258Z',
-    description: '게시물 수정 일자 (ISO 8601 형식)',
-  })
-  updatedAt: Date;
+  @ApiProperty({ example: null, description: '수정일시' })
+  updatedAt: Date | null;
 
   @ApiProperty({
     type: UserInfoDto,
-    description: '작성자 정보 (이름 등)',
+    description: '작성자 정보 (id, name)',
   })
   user: UserInfoDto;
+
+  @ApiProperty({ example: 3, description: '댓글 수' })
+  commentsCount: number;
 }
