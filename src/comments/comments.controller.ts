@@ -11,18 +11,23 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { ApiComments } from './comment.swagger';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
+@ApiTags('Comments')
+@ApiBearerAuth('accessToken')
 @UseGuards(CustomJwtAuthGuard)
 @Controller('groups/:groupId/posts/:postId/comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
+  @ApiComments.create()
   async createComment(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
@@ -45,6 +50,7 @@ export class CommentsController {
   }
 
   @Get()
+  @ApiComments.getList()
   async getCommentsByPost(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
@@ -63,6 +69,7 @@ export class CommentsController {
   }
 
   @Patch(':id')
+  @ApiComments.update()
   async updateComment(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
@@ -87,6 +94,7 @@ export class CommentsController {
   }
 
   @Delete(':id')
+  @ApiComments.delete()
   async deleteComment(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
