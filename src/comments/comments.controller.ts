@@ -20,7 +20,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
 @ApiTags('Comments')
-@ApiBearerAuth('accessToken')
+@ApiBearerAuth('access-token')
 @UseGuards(CustomJwtAuthGuard)
 @Controller('groups/:groupId/posts/:postId/comments')
 export class CommentsController {

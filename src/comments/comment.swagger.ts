@@ -159,7 +159,7 @@ const successResponseNoData = (message: string, status = 200) =>
   });
 
 // 클라이언트 요청 오류 응답
-const badRequestException = () =>
+const badRequestResponse = () =>
   ApiResponse({
     status: 400,
     description: '잘못된 요청 데이터',
@@ -253,7 +253,7 @@ export const ApiComments = {
         201,
         '댓글이 성공적으로 생성되었습니다.',
       ),
-      badRequestException(),
+      badRequestResponse(),
       withUnauthorizedResponses(),
       withNotFoundResponses(['PostNotFound']),
     ),
@@ -320,7 +320,7 @@ export const ApiComments = {
               postId: 1,
               userId: 6,
               content: '다음에 만날까요?.',
-              parentId: 2,
+              parentId: 1,
               createdAt: '2025-07-02T10:05:00Z',
               updatedAt: null,
               user: {

@@ -1,4 +1,4 @@
-import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -40,26 +40,19 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'Authorization',
+        description: 'JWT 토큰을 입력하세요.',
         in: 'header',
       },
       'access-token',
     )
     .setTermsOfService('https://github.com/modern-agile-team/9term-main-back')
     .addTag('모동구')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'Authorization',
-        description: 'JWT 토큰을 입력하세요.',
-        in: 'header',
-      },
-      'accessToken',
-    )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    extraModels: [],
+    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+  });
   SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);

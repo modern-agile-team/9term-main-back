@@ -1,12 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { SignupRequestDto } from './dto/signup-request.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { PasswordEncoderService } from './password-encoder.service';
 import { UserRepository } from './user.repository';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
-import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +53,11 @@ export class AuthService {
     if (!isMatch) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
-    const payload = { sub: user.id, userName: user.userName, name: user.name };
+    const payload: JwtPayload = {
+      sub: user.id,
+      userName: user.userName,
+      name: user.name,
+    };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
       expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
