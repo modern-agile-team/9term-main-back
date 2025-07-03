@@ -1,13 +1,15 @@
-import { IsNumber, IsString, IsNotEmpty } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class JoinGroupDto {
   @ApiProperty({ description: '사용자 ID', example: 1 })
   @IsNumber()
+  @IsOptional()
   userId: number;
 
   @ApiProperty({ description: '그룹 ID', example: 10 })
   @IsNumber()
+  @IsOptional()
   groupId: number;
 
   @ApiProperty({

@@ -9,24 +9,41 @@ export class MemberRepository {
   async findGroupMember(
     groupId: number,
     userId: number,
-  ): Promise<UserGroup | null> {
+  ): Promise<(UserGroup & { user?: { name: string } }) | null> {
     return this.prisma.userGroup.findFirst({
       where: {
         groupId,
         userId,
       },
+      include: {
+        user: true,
+      },
     });
   }
 
-  async findAllMembersByGroup(groupId: number): Promise<UserGroup[]> {
+  async findAllMembersByGroup(
+    groupId: number,
+  ): Promise<(UserGroup & { user?: { name: string } })[]> {
     return this.prisma.userGroup.findMany({
       where: { groupId },
+      include: {
+        user: true,
+      },
     });
   }
 
-  async deleteMemberById(id: number) {
-    return this.prisma.userGroup.delete({
-      where: { id },
+  async createMember(data: { groupId: number; userId: number; role: string }) {
+    return this.prisma.userGroup.create({
+      data,
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async deleteMember(groupId: number, userId: number) {
+    return this.prisma.userGroup.deleteMany({
+      where: { groupId, userId },
     });
   }
 }
