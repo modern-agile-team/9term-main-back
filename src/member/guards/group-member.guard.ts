@@ -16,12 +16,9 @@ export class GroupMemberGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const groupId = Number(request.params.groupId);
-    const user = request.user as AuthenticatedUser | undefined;
+    const user = request.user as AuthenticatedUser;
     const userId = user?.userId;
 
-    if (!userId) {
-      throw new ForbiddenException('로그인이 필요합니다.');
-    }
     if (!groupId) {
       throw new InternalServerErrorException('groupId 값이 필요합니다.');
     }

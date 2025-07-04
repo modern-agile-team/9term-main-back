@@ -58,6 +58,7 @@ export class UserController {
       status: 'success',
       message: '내 정보 조회 성공',
       data: {
+        userId: req.user.userId,
         name: req.user.name,
         userName: req.user.userName,
       },

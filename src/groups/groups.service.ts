@@ -13,15 +13,15 @@ import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
 import { GroupUserResponseDto } from './dto/group-user-response.dto';
-import {
-  CreateGroupInput,
-  GroupUserInput,
-  UpdateGroupInput,
-} from './types/group-inputs';
+import { CreateGroupInput, UpdateGroupInput } from './types/group-inputs';
+import { MembersService } from '../member/member.service';
 
 @Injectable()
 export class GroupsService {
-  constructor(private readonly groupsRepository: GroupsRepository) {}
+  constructor(
+    private readonly groupsRepository: GroupsRepository,
+    private readonly membersService: MembersService,
+  ) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -110,26 +110,7 @@ export class GroupsService {
   }
 
   async joinGroup(joinGroupDto: JoinGroupDto): Promise<GroupUserResponseDto> {
-    const { groupId, userId } = joinGroupDto;
-
-    const existingMembership = await this.groupsRepository.findGroupUser(
-      groupId,
-      userId,
-    );
-
-    if (existingMembership) {
-      throw new ConflictException('이미 이 그룹에 가입되어 있습니다.');
-    }
-
-    const groupUserData: GroupUserInput = {
-      userId,
-      groupId,
-      role: 'member',
-    };
-
-    const createdGroupUser =
-      await this.groupsRepository.createGroupUser(groupUserData);
-
+    const createdGroupUser = await this.membersService.joinGroup(joinGroupDto);
     return plainToInstance(GroupUserResponseDto, createdGroupUser, {
       excludeExtraneousValues: true,
     });
