@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
@@ -22,6 +23,7 @@ interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;
 }
 
+@ApiBearerAuth('access-token')
 @Controller('groups/:groupId/posts')
 @UseGuards(CustomJwtAuthGuard)
 export class PostsController {
