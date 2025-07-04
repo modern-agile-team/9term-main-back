@@ -59,7 +59,7 @@ jobs:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
       APP_PORT: 8081 # EC2 외부에서 접근할 포트
       CONTAINER_PORT: 3000 # 컨테이너 포트
-      CONTAINER_NAME: modgu # 컨테이너 이름
+      CONTAINER_NAME: modonggu-backend # 컨테이너 이름
 
     steps:
       - name: Deploy to EC2 and Run Docker Container
