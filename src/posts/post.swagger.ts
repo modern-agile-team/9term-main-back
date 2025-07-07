@@ -6,12 +6,10 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiResponseDto } from './dto/api-response.dto';
-import { ResPostDto } from './dto/res-post.dto';
+import { ApiResponseDto } from './dto/responses/api-response.dto';
+import { PostResponseDto } from './dto/responses/post-response.dto';
+import { PostCreateResponseDto } from './dto/responses/post-create-response.dto';
 
-/**
- * 인증 실패 공통 응답
- */
 const unauthorizedResponse = () =>
   ApiResponse({
     status: 401,
@@ -26,9 +24,6 @@ const unauthorizedResponse = () =>
     },
   });
 
-/**
- * 공통 단일 객체 응답 스키마 생성
- */
 function ApiResponseWithData<T extends Type<any>>(
   model: T,
   status = 200,
@@ -53,9 +48,6 @@ function ApiResponseWithData<T extends Type<any>>(
   );
 }
 
-/**
- * 공통 배열 객체 응답 스키마 생성
- */
 function ApiArrayResponseWithData<T extends Type<any>>(
   model: T,
   status = 200,
@@ -89,7 +81,7 @@ export const ApiPosts = {
       ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 생성' }),
       ApiResponseWithData(
-        ResPostDto,
+        PostCreateResponseDto,
         201,
         '게시물이 성공적으로 생성되었습니다.',
       ),
@@ -114,7 +106,7 @@ export const ApiPosts = {
       ApiBearerAuth('access-token'),
       ApiOperation({ summary: '모든 게시물 조회' }),
       ApiArrayResponseWithData(
-        ResPostDto,
+        PostResponseDto,
         200,
         '게시물 목록을 성공적으로 가져왔습니다.',
       ),
@@ -125,7 +117,11 @@ export const ApiPosts = {
     applyDecorators(
       ApiBearerAuth('access-token'),
       ApiOperation({ summary: '특정 게시물 조회' }),
-      ApiResponseWithData(ResPostDto, 200, '게시물을 성공적으로 가져왔습니다.'),
+      ApiResponseWithData(
+        PostResponseDto,
+        200,
+        '게시물을 성공적으로 가져왔습니다.',
+      ),
       ApiResponse({
         status: 404,
         description: '게시물을 찾을 수 없음',
@@ -147,7 +143,7 @@ export const ApiPosts = {
       ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 수정' }),
       ApiResponseWithData(
-        ResPostDto,
+        PostResponseDto,
         200,
         '게시물이 성공적으로 수정되었습니다.',
       ),

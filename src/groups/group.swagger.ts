@@ -1,5 +1,3 @@
-// src/groups/group.swagger.ts
-
 import { applyDecorators, Type } from '@nestjs/common';
 import {
   ApiOperation,

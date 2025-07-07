@@ -4,61 +4,96 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PostsRepository } from './posts.repository';
-import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
+import { CommentsRepository } from 'src/comments/comments.repository';
+import {
+  Post,
+  PostWithCommentCount,
+  CreatePostData,
+  UpdatePostData,
+} from './interfaces/post.interface';
+import { PostResponseDto } from './dto/responses/post-response.dto';
+import { CreatePostRequestDto } from './dto/requests/create-post.dto';
+import { PostCreateResponseDto } from './dto/responses/post-create-response.dto';
+import { plainToInstance } from 'class-transformer';
+import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly postsRepository: PostsRepository) {}
+  constructor(
+    private readonly postsRepository: PostsRepository,
+    private readonly commentsRepository: CommentsRepository,
+  ) {}
 
   async createPost(
-    createPostDto: CreatePostDto,
+    createPostDto: CreatePostRequestDto,
     groupId: number,
     userId: number,
-  ) {
-    const createPostData = {
+  ): Promise<PostCreateResponseDto> {
+    const createPostData: CreatePostData = {
       title: createPostDto.title,
       content: createPostDto.content,
       groupId,
       userId,
     };
-    return await this.postsRepository.createPost(createPostData);
+
+    const createPost: Post =
+      await this.postsRepository.createPost(createPostData);
+
+    return plainToInstance(PostCreateResponseDto, createPost, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  async getAllPosts(groupId: number) {
+  async findAllPostsByGroupId(groupId: number): Promise<PostResponseDto[]> {
     const posts = await this.postsRepository.findPostsByGroupId(groupId);
 
-    return posts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      user: post.user,
-      commentsCount: post._count.comments,
-    }));
+    const postsWithCount = await Promise.all(
+      posts.map(async (post) => {
+        const commentsCount = await this.commentsRepository.countByPostId(
+          post.id,
+        );
+
+        return {
+          ...post,
+          commentsCount,
+        };
+      }),
+    );
+
+    return plainToInstance(PostResponseDto, postsWithCount, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  async getPostById(id: number) {
+  async getPostById(id: number): Promise<PostResponseDto> {
     const post = await this.postsRepository.findPostById(id);
+
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
     }
 
-    return {
-      id: post.id,
-      userId: post.userId,
-      groupId: post.groupId,
-      title: post.title,
-      content: post.content,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      user: post.user,
-      commentsCount: post._count.comments,
+    const commentsCount = await this.commentsRepository.countByPostId(post.id);
+
+    const postWithCount: PostWithCommentCount = {
+      ...post,
+      commentsCount,
     };
+
+    return plainToInstance(PostResponseDto, postWithCount, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  async updatePost(updatePostDto: UpdatePostDto, id: number, userId: number) {
+  async updatePost(
+    updatePostDto: UpdatePostRequestDto,
+    id: number,
+    userId: number,
+  ): Promise<PostResponseDto> {
+    const updatePostData: UpdatePostData = {
+      title: updatePostDto.title,
+      content: updatePostDto.content,
+    };
+
     const post = await this.postsRepository.findPostById(id);
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
@@ -66,15 +101,17 @@ export class PostsService {
     if (post.userId !== userId) {
       throw new ForbiddenException('이 게시물을 수정할 권한이 없습니다.');
     }
-    const updatedPostData = {
-      title: updatePostDto.title,
-      content: updatePostDto.content,
-    };
+    const updatedPost = await this.postsRepository.updatePostById(
+      id,
+      updatePostData,
+    );
 
-    return await this.postsRepository.updatePostById(id, updatedPostData);
+    return plainToInstance(PostResponseDto, updatedPost, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  async deletePost(id: number, userId: number) {
+  async deletePost(id: number, userId: number): Promise<void> {
     const post = await this.postsRepository.findPostById(id);
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
@@ -83,6 +120,6 @@ export class PostsService {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
-    return await this.postsRepository.deletePostById(id);
+    await this.postsRepository.deletePostWithComments(id);
   }
 }
