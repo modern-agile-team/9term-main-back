@@ -9,6 +9,7 @@ import {
   ForbiddenException,
   Post,
   Body,
+  NotFoundException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { MembersService } from './member.service';
@@ -32,12 +33,16 @@ export class MembersController {
   }
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
-  @Get(':userId')
+  @Get(':id')
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
   ): Promise<MemberResponseDto | null> {
-    return this.membersService.getGroupMember(groupId, userId);
+    const member = await this.membersService.getGroupMember(groupId, id);
+    if (!member) {
+      throw new NotFoundException('해당 멤버가 존재하지 않습니다.');
+    }
+    return member;
   }
 
   // 그룹 가입
@@ -58,16 +63,20 @@ export class MembersController {
 
   // 그룹 매니저만 멤버 삭제 가능
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
-  @Delete(':userId')
+  @Delete(':id')
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
   ) {
     const requesterUserId = (req.user as AuthenticatedUser)?.userId;
-    if (userId === requesterUserId) {
+    const member = await this.membersService.getGroupMember(groupId, id);
+    if (!member) {
+      throw new ForbiddenException('해당 멤버가 존재하지 않습니다.');
+    }
+    if (member.userId === requesterUserId) {
       throw new ForbiddenException('자신을 삭제할 수 없습니다.');
     }
-    return this.membersService.processRemoveMember(groupId, userId);
+    return this.membersService.removeMember(groupId, id);
   }
 }

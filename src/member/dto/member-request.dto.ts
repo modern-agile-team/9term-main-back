@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class MemberRequestDto {
+export class JoinMemberRequestDto {
   @ApiProperty({ example: 10, description: '그룹 ID' })
   groupId: number;
 

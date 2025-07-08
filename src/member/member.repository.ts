@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserGroup } from './interfaces/member.interface';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class MemberRepository {
@@ -9,7 +10,7 @@ export class MemberRepository {
   async findGroupMember(
     groupId: number,
     userId: number,
-  ): Promise<(UserGroup & { user?: { name: string } }) | null> {
+  ): Promise<(UserGroup & { user: User }) | null> {
     return this.prisma.userGroup.findFirst({
       where: {
         groupId,
@@ -41,7 +42,7 @@ export class MemberRepository {
     });
   }
 
-  async deleteMember(groupId: number, userId: number) {
+  async deleteManyByGroupAndUser(groupId: number, userId: number) {
     return this.prisma.userGroup.deleteMany({
       where: { groupId, userId },
     });

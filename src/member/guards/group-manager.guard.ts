@@ -17,7 +17,7 @@ export class GroupManagerGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const groupId: number = Number(request.params.groupId);
     const user = request.user as AuthenticatedUser;
-    const userId: number = user.userId;
+    const userId = user.userId;
 
     if (!groupId) {
       throw new InternalServerErrorException('groupId 값이 필요합니다.');

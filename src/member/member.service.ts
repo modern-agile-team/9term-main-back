@@ -2,9 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { MemberRepository } from './member.repository';
-import { MemberRequestDto } from './dto/member-request.dto';
+import { JoinMemberRequestDto } from './dto/member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
 
 @Injectable()
@@ -16,12 +17,17 @@ export class MembersService {
 
     return members
       .filter((member) => member.role !== 'admin')
-      .map((member) => ({
-        userId: member.userId,
-        name: member.user?.name ?? '',
-        role: member.role,
-        joinedAt: member.createdAt,
-      }));
+      .map((member) => {
+        if (!member.user) {
+          throw new InternalServerErrorException('유저 정보가 없습니다.');
+        }
+        return {
+          userId: member.userId,
+          name: member.user.name,
+          role: member.role,
+          joinedAt: member.createdAt,
+        };
+      });
   }
 
   async getGroupMember(
@@ -30,20 +36,20 @@ export class MembersService {
   ): Promise<MemberResponseDto | null> {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
     if (!member) {
-      return null;
+      throw new NotFoundException('그룹 멤버가 존재하지 않습니다.');
     }
     return {
       userId: member.userId,
-      name: member.user?.name ?? '',
+      name: member.user.name,
       role: member.role,
       joinedAt: member.createdAt,
     };
   }
 
-  async processRemoveMember(
+  async removeMember(
     groupId: number,
     targetUserId: number,
-  ): Promise<MemberResponseDto> {
+  ): Promise<{ message: string }> {
     const targetMember = await this.memberRepository.findGroupMember(
       groupId,
       targetUserId,
@@ -51,21 +57,17 @@ export class MembersService {
     if (!targetMember) {
       throw new NotFoundException('삭제할 멤버가 존재하지 않습니다.');
     }
-    await this.removeMember(targetMember.groupId, targetMember.userId);
+    await this.memberRepository.deleteManyByGroupAndUser(
+      targetMember.groupId,
+      targetMember.userId,
+    );
     return {
-      userId: targetMember.userId,
-      name: targetMember.user?.name ?? '',
-      role: targetMember.role,
-      joinedAt: targetMember.createdAt,
+      message: '삭제가 완료되었습니다.',
     };
   }
 
-  async removeMember(groupId: number, userId: number): Promise<void> {
-    await this.memberRepository.deleteMember(groupId, userId);
-  }
-
   async joinGroup(
-    dto: MemberRequestDto & { userId: number },
+    dto: JoinMemberRequestDto & { userId: number },
   ): Promise<MemberResponseDto> {
     const { groupId, userId, role } = dto;
     const existingMembership = await this.memberRepository.findGroupMember(
@@ -75,17 +77,17 @@ export class MembersService {
     if (existingMembership) {
       throw new ConflictException('이미 이 그룹에 가입되어 있습니다.');
     }
-    const createdGroupUser = await this.memberRepository.createMember({
+    const joinGroupUser = await this.memberRepository.createMember({
       groupId,
       userId,
       role: role ?? 'member',
     });
 
     return {
-      userId: createdGroupUser.userId,
-      name: createdGroupUser.user?.name ?? '',
-      role: createdGroupUser.role,
-      joinedAt: createdGroupUser.createdAt,
+      userId: joinGroupUser.userId,
+      name: joinGroupUser.user.name,
+      role: joinGroupUser.role,
+      joinedAt: joinGroupUser.createdAt,
     };
   }
 }
