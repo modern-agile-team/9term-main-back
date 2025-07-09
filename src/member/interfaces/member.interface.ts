@@ -9,3 +9,10 @@ export interface Member {
 export interface GroupMember extends Member {
   groupId: number;
 }
+
+export interface UserGroup {
+  userId: number;
+  groupId: number;
+  role: string;
+  createdAt: Date;
+}

@@ -6,6 +6,10 @@ import {
   Req,
   Delete,
   UseGuards,
+  ForbiddenException,
+  Post,
+  Body,
+  NotFoundException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { MembersService } from './member.service';
@@ -13,6 +17,8 @@ import { GroupManagerGuard } from './guards/group-manager.guard';
 import { GroupMemberGuard } from './guards/group-member.guard';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { MemberResponseDto } from './dto/member-response.dto';
+import { JoinGroupDto } from '../groups/dto/join-group.dto';
 
 @Controller('groups/:groupId/members')
 export class MembersController {
@@ -20,30 +26,57 @@ export class MembersController {
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get()
-  async getMemberList(@Param('groupId', ParseIntPipe) groupId: number) {
+  async getMemberList(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ): Promise<MemberResponseDto[]> {
     return this.membersService.getMemberList(groupId);
   }
 
-  // 그룹 멤버 조회 (멤버만 조회 가능)
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
-  @Get(':userId')
+  @Get(':id')
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Param('userId', ParseIntPipe) userId: number,
-  ) {
-    return this.membersService.getGroupMember(groupId, userId);
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MemberResponseDto | null> {
+    const member = await this.membersService.getGroupMember(groupId, id);
+    if (!member) {
+      throw new NotFoundException('해당 멤버가 존재하지 않습니다.');
+    }
+    return member;
+  }
+
+  // 그룹 가입
+  @UseGuards(CustomJwtAuthGuard)
+  @Post()
+  async joinGroup(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Body() joinGroupDto: JoinGroupDto,
+    @Req() req: Request,
+  ): Promise<MemberResponseDto> {
+    const user = req.user as AuthenticatedUser;
+    return this.membersService.joinGroup({
+      ...joinGroupDto,
+      groupId,
+      userId: user.userId,
+    });
   }
 
   // 그룹 매니저만 멤버 삭제 가능
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
-  @Delete(':userId')
+  @Delete(':id')
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
   ) {
     const requesterUserId = (req.user as AuthenticatedUser)?.userId;
-
-    return this.membersService.removeMember(groupId, userId, requesterUserId);
+    const member = await this.membersService.getGroupMember(groupId, id);
+    if (!member) {
+      throw new ForbiddenException('해당 멤버가 존재하지 않습니다.');
+    }
+    if (member.userId === requesterUserId) {
+      throw new ForbiddenException('자신을 삭제할 수 없습니다.');
+    }
+    return this.membersService.removeMember(groupId, id);
   }
 }
