@@ -8,7 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiResponseDto } from './dto/responses/api-response.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
-import { PostCreateResponseDto } from './dto/responses/post-create-response.dto';
+import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
 
 const unauthorizedResponse = () =>
   ApiResponse({
@@ -81,7 +81,7 @@ export const ApiPosts = {
       ApiBearerAuth('access-token'),
       ApiOperation({ summary: '게시물 생성' }),
       ApiResponseWithData(
-        PostCreateResponseDto,
+        PostWriteResponseDto,
         201,
         '게시물이 성공적으로 생성되었습니다.',
       ),

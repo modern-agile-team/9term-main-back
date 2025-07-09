@@ -11,10 +11,7 @@ import {
   CreatePostData,
   UpdatePostData,
 } from './interfaces/post.interface';
-import { PostResponseDto } from './dto/responses/post-response.dto';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
-import { PostCreateResponseDto } from './dto/responses/post-create-response.dto';
-import { plainToInstance } from 'class-transformer';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 
 @Injectable()
@@ -28,7 +25,7 @@ export class PostsService {
     createPostDto: CreatePostRequestDto,
     groupId: number,
     userId: number,
-  ): Promise<PostCreateResponseDto> {
+  ): Promise<Post> {
     const createPostData: CreatePostData = {
       title: createPostDto.title,
       content: createPostDto.content,
@@ -36,59 +33,48 @@ export class PostsService {
       userId,
     };
 
-    const createPost: Post =
+    const createdPost: Post =
       await this.postsRepository.createPost(createPostData);
 
-    return plainToInstance(PostCreateResponseDto, createPost, {
-      excludeExtraneousValues: true,
-    });
+    return createdPost;
   }
 
-  async findAllPostsByGroupId(groupId: number): Promise<PostResponseDto[]> {
-    const posts = await this.postsRepository.findPostsByGroupId(groupId);
+  async findAllPostsByGroupId(
+    groupId: number,
+  ): Promise<PostWithCommentCount[]> {
+    const posts =
+      await this.postsRepository.findPostsWithCommentsCount(groupId);
 
-    const postsWithCount = await Promise.all(
-      posts.map(async (post) => {
-        const commentsCount = await this.commentsRepository.countByPostId(
-          post.id,
-        );
-
-        return {
-          ...post,
-          commentsCount,
-        };
+    const postsWithCommentsCount: PostWithCommentCount[] = posts.map(
+      (post) => ({
+        ...post,
+        commentsCount: post._count.comments,
       }),
     );
 
-    return plainToInstance(PostResponseDto, postsWithCount, {
-      excludeExtraneousValues: true,
-    });
+    return postsWithCommentsCount;
   }
 
-  async getPostById(id: number): Promise<PostResponseDto> {
+  async getPostById(id: number): Promise<PostWithCommentCount> {
     const post = await this.postsRepository.findPostById(id);
 
     if (!post) {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
     }
 
-    const commentsCount = await this.commentsRepository.countByPostId(post.id);
-
-    const postWithCount: PostWithCommentCount = {
+    const postsWithCommentsCount: PostWithCommentCount = {
       ...post,
-      commentsCount,
+      commentsCount: post._count.comments,
     };
 
-    return plainToInstance(PostResponseDto, postWithCount, {
-      excludeExtraneousValues: true,
-    });
+    return postsWithCommentsCount;
   }
 
   async updatePost(
     updatePostDto: UpdatePostRequestDto,
     id: number,
     userId: number,
-  ): Promise<PostResponseDto> {
+  ): Promise<Post> {
     const updatePostData: UpdatePostData = {
       title: updatePostDto.title,
       content: updatePostDto.content,
@@ -106,9 +92,7 @@ export class PostsService {
       updatePostData,
     );
 
-    return plainToInstance(PostResponseDto, updatedPost, {
-      excludeExtraneousValues: true,
-    });
+    return updatedPost;
   }
 
   async deletePost(id: number, userId: number): Promise<void> {
@@ -120,6 +104,6 @@ export class PostsService {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
-    await this.postsRepository.deletePostWithComments(id);
+    await this.postsRepository.deletePostById(id);
   }
 }

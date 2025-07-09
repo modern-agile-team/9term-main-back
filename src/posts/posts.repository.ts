@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreatePostData, PostWithUser } from './interfaces/post.interface';
+import {
+  CreatePostData,
+  PostWithUserAndCount,
+  UpdatePostData,
+} from './interfaces/post.interface';
 import { Post } from '@prisma/client';
 
 @Injectable()
@@ -11,22 +15,26 @@ export class PostsRepository {
     return await this.prisma.post.create({ data });
   }
 
-  async findPostsByGroupId(groupId: number): Promise<PostWithUser[]> {
+  async findPostsWithCommentsCount(
+    groupId: number,
+  ): Promise<PostWithUserAndCount[]> {
     return await this.prisma.post.findMany({
       where: { groupId },
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
+          select: { id: true, name: true },
+        },
+        _count: {
           select: {
-            id: true,
-            name: true,
+            comments: true,
           },
         },
       },
     });
   }
 
-  async findPostById(id: number): Promise<PostWithUser | null> {
+  async findPostById(id: number): Promise<PostWithUserAndCount | null> {
     return await this.prisma.post.findUnique({
       where: { id },
       include: {
@@ -36,11 +44,16 @@ export class PostsRepository {
             name: true,
           },
         },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
       },
     });
   }
 
-  async updatePostById(id: number, data: { title?: string; content?: string }) {
+  async updatePostById(id: number, data: UpdatePostData) {
     return await this.prisma.post.update({
       where: { id },
       data: {
@@ -50,15 +63,9 @@ export class PostsRepository {
     });
   }
 
-  async deletePostWithComments(postId: number): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.comment.deleteMany({
-        where: { postId },
-      });
-
-      await tx.post.delete({
-        where: { id: postId },
-      });
+  async deletePostById(id: number): Promise<void> {
+    await this.prisma.post.delete({
+      where: { id },
     });
   }
 }

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
-export class PostCreateResponseDto {
+export class PostWriteResponseDto {
   @ApiProperty({ example: 1, description: '게시물 ID' })
   @Expose()
   id: number;
@@ -26,7 +26,11 @@ export class PostCreateResponseDto {
   @Expose()
   createdAt: Date;
 
-  @ApiProperty({ example: null, description: '수정일' })
+  @ApiProperty({
+    example: '2025-07-04T10:00:00Z',
+    description: '수정일',
+    nullable: true,
+  })
   @Expose()
   updatedAt: Date | null;
 }

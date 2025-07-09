@@ -30,3 +30,9 @@ export interface UpdatePostData {
   title?: string;
   content?: string;
 }
+
+export interface PostWithUserAndCount extends PostWithUser {
+  _count: {
+    comments: number;
+  };
+}
