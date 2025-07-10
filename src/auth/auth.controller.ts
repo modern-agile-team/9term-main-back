@@ -5,8 +5,11 @@ import { SignupRequestDto } from './dto/signup-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
 import { ConfigService } from '@nestjs/config';
+import { ApiAuth, AuthSwagger } from './auth.swagger';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 @Controller('auth')
+@AuthSwagger()
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -28,7 +31,10 @@ export class AuthController {
   }
 
   @Post('signup')
-  async signup(@Body() signupRequestDto: SignupRequestDto) {
+  @ApiAuth.signup()
+  async signup(
+    @Body() signupRequestDto: SignupRequestDto,
+  ): Promise<AuthResponseDto> {
     await this.authService.signup(signupRequestDto);
     return {
       status: 'success',
@@ -38,10 +44,11 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiAuth.login()
   async login(
     @Body() loginRequestDto: LoginRequestDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<AuthResponseDto> {
     const { accessToken, refreshToken } =
       await this.authService.login(loginRequestDto);
 
@@ -52,16 +59,18 @@ export class AuthController {
       message: '로그인에 성공했습니다.',
       data: {
         accessToken,
+        refreshToken,
       },
     };
   }
 
   @UseGuards(JwtRefreshGuard)
+  @ApiAuth.refresh()
   @Post('refresh')
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<AuthResponseDto> {
     const refreshToken = req.cookies['refresh_token'] as string;
     if (!refreshToken) {
       res.status(400);
@@ -82,6 +91,7 @@ export class AuthController {
       message: 'Access Token 재발급에 성공했습니다.',
       data: {
         accessToken,
+        refreshToken: newRefreshToken,
       },
     };
   }
