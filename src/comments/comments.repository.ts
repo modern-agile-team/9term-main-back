@@ -39,6 +39,12 @@ export class CommentsRepository {
     });
   }
 
+  countByPostId(postId: number): Promise<number> {
+    return this.prisma.comment.count({
+      where: { postId },
+    });
+  }
+
   updateComment(id: number, content: string) {
     return this.prisma.comment.update({
       where: { id },
