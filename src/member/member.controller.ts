@@ -19,13 +19,16 @@ import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinGroupDto } from '../groups/dto/join-group.dto';
+import { MemberSwagger, ApiMembers } from './member.swagger';
 
 @Controller('groups/:groupId/members')
+@MemberSwagger()
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get()
+  @ApiMembers.getList()
   async getMemberList(
     @Param('groupId', ParseIntPipe) groupId: number,
   ): Promise<MemberResponseDto[]> {
@@ -34,6 +37,7 @@ export class MembersController {
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get(':id')
+  @ApiMembers.getOne()
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
@@ -48,6 +52,7 @@ export class MembersController {
   // 그룹 가입
   @UseGuards(CustomJwtAuthGuard)
   @Post()
+  @ApiMembers.join()
   async joinGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() joinGroupDto: JoinGroupDto,
@@ -64,6 +69,7 @@ export class MembersController {
   // 그룹 매니저만 멤버 삭제 가능
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @Delete(':id')
+  @ApiMembers.remove()
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
