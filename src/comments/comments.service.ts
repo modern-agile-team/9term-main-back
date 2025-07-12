@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Comment, Post, User } from '@prisma/client';
+import { Comment, Post } from '@prisma/client';
 import { PostsRepository } from 'src/posts/posts.repository';
 import { CommentsRepository } from './comments.repository';
 import { CreateCommentDto } from './dto/requests/create-comment.dto';
@@ -48,7 +48,7 @@ export class CommentsService implements ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: User })[]> {
+  ): Promise<(Comment & { user: { name: string } })[]> {
     await this.verifyPostAndGroup(postId, groupId);
 
     if (parentId) {
