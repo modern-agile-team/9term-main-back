@@ -4,13 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Comment, Post, User } from '@prisma/client';
 import { PostsRepository } from 'src/posts/posts.repository';
 import { CommentsRepository } from './comments.repository';
-import { CreateCommentDto } from './dto/create-comment.dto';
-import { UpdateCommentDto } from './dto/update-comment.dto';
+import { CreateCommentDto } from './dto/requests/create-comment.dto';
+import { UpdateCommentDto } from './dto/requests/update-comment.dto';
+import { ICommentsService } from './interfaces/comments.service.interface';
 
 @Injectable()
-export class CommentsService {
+export class CommentsService implements ICommentsService {
   constructor(
     private readonly commentsRepo: CommentsRepository,
     private readonly postsRepo: PostsRepository,
@@ -22,48 +24,40 @@ export class CommentsService {
     userId: number,
     postId: number,
     groupId: number,
-  ) {
+  ): Promise<Comment> {
     const { content, parentId } = createCommentDto;
 
     await this.verifyPostAndGroup(postId, groupId);
     if (parentId) {
-      const parentComment = await this.commentsRepo.findCommentById(parentId);
-      if (!parentComment) {
-        throw new NotFoundException('존재하지 않는 부모 댓글입니다.');
-      }
-      if (parentComment.postId !== postId) {
-        throw new NotFoundException(
-          '존재하지 않는 부모 댓글이거나, 해당 게시글의 댓글이 아닙니다.',
-        );
-      }
-      if (parentComment.parentId !== null) {
-        throw new BadRequestException('대댓글에는 답글을 달 수 없습니다.');
-      }
+      await this.verifyParentComment(parentId, postId);
     }
-    // parentId가 없거나 null이면 최상위 댓글로 저장됨.
-    return this.commentsRepo.createComment({
+
+    const newComment = await this.commentsRepo.createComment({
       content,
       userId,
       postId,
-      parentId,
+      parentId: parentId || null,
     });
+
+    // parentId가 없거나 null이면 최상위 댓글로 저장됨.
+    return newComment;
   }
 
   // 특정 게시물의 댓글 가져오기
-  async getCommentsByPost(postId: number, groupId: number, parentId?: number) {
+  async getCommentsByPost(
+    postId: number,
+    groupId: number,
+    parentId?: number,
+  ): Promise<(Comment & { user: User })[]> {
     await this.verifyPostAndGroup(postId, groupId);
+
     if (parentId) {
-      const parentComment = await this.commentsRepo.findCommentById(parentId);
-      if (!parentComment) {
-        return [];
-      }
-      if (parentComment.postId !== postId) {
-        throw new NotFoundException(
-          '존재하지 않는 부모 댓글이거나, 해당 게시글의 댓글이 아닙니다.',
-        );
-      }
+      await this.verifyParentComment(parentId, postId);
     }
-    return this.commentsRepo.findComments(postId, parentId);
+
+    const comments = await this.commentsRepo.findComments(postId, parentId);
+
+    return comments;
   }
 
   // 댓글 수정
@@ -73,34 +67,43 @@ export class CommentsService {
     userId: number,
     groupId: number,
     postId: number,
-  ) {
+  ): Promise<Comment> {
     await this.verifyPostAndGroup(postId, groupId);
     const comment = await this.verifyCommentOwnership(id, userId, postId);
     const newContent = updateCommentDto.content;
 
     if (newContent === undefined || newContent === comment.content) {
-      return comment; // 수정할 내용이 없거나 공백일 경우 기존 댓글 반환
+      return comment;
     }
-    return this.commentsRepo.updateComment(id, newContent);
-  }
 
+    const updatedComment = await this.commentsRepo.updateComment(
+      id,
+      newContent,
+    );
+    return updatedComment;
+  }
   // 댓글 삭제
   async deleteComment(
     id: number,
     userId: number,
     groupId: number,
     postId: number,
-  ) {
+  ): Promise<void> {
     await this.verifyPostAndGroup(postId, groupId);
-    await this.verifyCommentOwnership(id, userId, postId);
-    return this.commentsRepo.deleteComment(id);
+    const deletedComment = await this.verifyCommentOwnership(
+      id,
+      userId,
+      postId,
+    );
+    await this.commentsRepo.deleteComment(id);
   }
 
+  // 검증용 메서드 ( 댓글, 게시물/그룹, 부모 댓글)
   private async verifyCommentOwnership(
     commentId: number,
     userId: number,
     postId: number,
-  ) {
+  ): Promise<Comment> {
     const comment = await this.commentsRepo.findCommentById(commentId);
 
     if (!comment) {
@@ -117,15 +120,37 @@ export class CommentsService {
     return comment;
   }
 
-  private async verifyPostAndGroup(postId: number, groupId: number) {
+  private async verifyPostAndGroup(
+    postId: number,
+    groupId: number,
+  ): Promise<Post> {
     const post = await this.postsRepo.findPostById(postId);
 
     if (!post) {
-      throw new NotFoundException('존재하지 않는 게시글입니다.');
+      throw new NotFoundException('존재하지 않는 게시물입니다.');
     }
     if (post.groupId !== groupId) {
-      throw new BadRequestException('해당 그룹에 속하지 않는 게시글입니다.');
+      throw new BadRequestException('해당 그룹에 속하지 않는 게시물입니다.');
     }
     return post;
+  }
+
+  private async verifyParentComment(
+    parentId: number,
+    postId: number,
+  ): Promise<Comment> {
+    const parentComment = await this.commentsRepo.findCommentById(parentId);
+
+    if (!parentComment) {
+      throw new NotFoundException('존재하지 않는 부모 댓글입니다.');
+    }
+    if (parentComment.postId !== postId) {
+      throw new NotFoundException('해당 게시글에 속하지 않는 부모 댓글입니다.');
+    }
+    if (parentComment.parentId !== null) {
+      throw new BadRequestException('대댓글에는 답글을 달 수 없습니다.');
+    }
+
+    return parentComment;
   }
 }

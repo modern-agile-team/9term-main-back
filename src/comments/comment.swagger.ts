@@ -6,8 +6,8 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiResponseDto } from './dto/api-response.dto';
-import { ResCommentDto } from './dto/res-comment.dto';
+import { ApiResponseDto } from './dto/responses/api-response.dto';
+import { ResCommentDto } from './dto/responses/res-comment.dto';
 
 // 공통 Unauthorized
 const unauthorizedExamples = {
@@ -310,6 +310,7 @@ export const ApiComments = {
               createdAt: '2025-07-02T10:00:00Z',
               updatedAt: null,
               user: {
+                id: 1,
                 name: '김남주',
               },
             },
@@ -324,6 +325,7 @@ export const ApiComments = {
               createdAt: '2025-07-02T10:05:00Z',
               updatedAt: null,
               user: {
+                id: 2,
                 name: '김여주',
               },
             },
