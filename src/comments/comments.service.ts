@@ -90,11 +90,7 @@ export class CommentsService implements ICommentsService {
     postId: number,
   ): Promise<void> {
     await this.verifyPostAndGroup(postId, groupId);
-    const deletedComment = await this.verifyCommentOwnership(
-      id,
-      userId,
-      postId,
-    );
+    await this.verifyCommentOwnership(id, userId, postId);
     await this.commentsRepo.deleteComment(id);
   }
 
