@@ -15,7 +15,7 @@ const unauthorizedExamples = {
     error: 'Unauthorized',
     statusCode: 401,
   },
-};
+} as const;
 
 const conflictExamples = {
   DuplicateUser: {
@@ -23,7 +23,7 @@ const conflictExamples = {
     error: 'Conflict',
     statusCode: 409,
   },
-};
+} as const;
 
 const badRequestExamples = {
   PasswordPattern: {
@@ -61,7 +61,7 @@ const badRequestExamples = {
     error: 'Bad Request',
     statusCode: 400,
   },
-};
+} as const;
 
 const unauthorizedResponses = () =>
   ApiResponse({
@@ -126,7 +126,6 @@ export const ApiAuth = {
         '비밀번호 패턴 불일치': badRequestExamples.PasswordPattern,
         '이메일 패턴 불일치': badRequestExamples.EmailPattern,
         '필수값 누락/형식 오류': badRequestExamples.Required,
-        '존재하지 않는 사용자': badRequestExamples.UserNotFound,
       }),
       unauthorizedResponses(),
     ),
