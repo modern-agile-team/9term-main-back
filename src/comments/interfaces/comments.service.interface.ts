@@ -14,7 +14,7 @@ export interface ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: { name: string } })[]>;
+  ): Promise<(Comment & { user: { id: number; name: string } })[]>;
 
   updateComment(
     id: number,

@@ -1,4 +1,4 @@
-import { Comment, User } from '@prisma/client';
+import { Comment } from '@prisma/client';
 
 export interface ICommentsRepository {
   findCommentById(id: number): Promise<Comment | null>;
@@ -9,10 +9,13 @@ export interface ICommentsRepository {
     postId: number;
     parentId: number | null;
   }): Promise<Comment>;
+
   findComments(
     postId: number,
     parentId?: number | null,
-  ): Promise<(Comment & { user: User })[]>;
+  ): Promise<(Comment & { user: { id: number; name: string } })[]>;
+
   updateComment(id: number, content: string): Promise<Comment>;
-  deleteComment(id: number): Promise<void>;
+
+  deleteComment(id: number): Promise<Comment>;
 }

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Comment } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ICommentsRepository } from './interfaces/comments.repository.interface';
 
 @Injectable()
-export class CommentsRepository {
+export class CommentsRepository implements ICommentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findCommentById(id: number): Promise<Comment | null> {
@@ -41,12 +42,6 @@ export class CommentsRepository {
           },
         },
       },
-    });
-  }
-
-  countByPostId(postId: number): Promise<number> {
-    return this.prisma.comment.count({
-      where: { postId },
     });
   }
 

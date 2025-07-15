@@ -28,8 +28,13 @@ export class CommentsService implements ICommentsService {
     const { content, parentId } = createCommentDto;
 
     await this.verifyPostAndGroup(postId, groupId);
+
     if (parentId) {
-      await this.verifyParentComment(parentId, postId);
+      const parentComment = await this.verifyParentComment(parentId, postId);
+
+      if (parentComment.parentId !== null) {
+        throw new BadRequestException('대댓글에는 답글을 달 수 없습니다.');
+      }
     }
 
     const newComment = await this.commentsRepo.createComment({
@@ -48,7 +53,7 @@ export class CommentsService implements ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: { name: string } })[]> {
+  ): Promise<(Comment & { user: { id: number; name: string } })[]> {
     await this.verifyPostAndGroup(postId, groupId);
 
     if (parentId) {
@@ -82,6 +87,7 @@ export class CommentsService implements ICommentsService {
     );
     return updatedComment;
   }
+
   // 댓글 삭제
   async deleteComment(
     id: number,
@@ -106,7 +112,7 @@ export class CommentsService implements ICommentsService {
       throw new NotFoundException('해당 댓글이 존재하지 않습니다.');
     }
     if (comment.postId !== postId) {
-      throw new NotFoundException('해당 댓글이 게시글에 속하지 않습니다.');
+      throw new NotFoundException('해당 게시물에 속하지 않는 댓글입니다.');
     }
     if (comment.userId !== userId) {
       throw new ForbiddenException(
@@ -141,12 +147,8 @@ export class CommentsService implements ICommentsService {
       throw new NotFoundException('존재하지 않는 부모 댓글입니다.');
     }
     if (parentComment.postId !== postId) {
-      throw new NotFoundException('해당 게시글에 속하지 않는 부모 댓글입니다.');
+      throw new NotFoundException('해당 게시물에 속하지 않는 부모 댓글입니다.');
     }
-    if (parentComment.parentId !== null) {
-      throw new BadRequestException('대댓글에는 답글을 달 수 없습니다.');
-    }
-
     return parentComment;
   }
 }
