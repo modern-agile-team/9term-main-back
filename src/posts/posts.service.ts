@@ -1,18 +1,18 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
-import { PostsRepository } from './posts.repository';
 import { CommentsRepository } from 'src/comments/comments.repository';
-import {
-  Post,
-  PostWithCommentCount,
-  CreatePostData,
-  UpdatePostData,
-} from './interfaces/post.interface';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
+import {
+  CreatePostData,
+  Post,
+  PostWithCommentCount,
+  UpdatePostData,
+} from './interfaces/post.interface';
+import { PostsRepository } from './posts.repository';
 
 @Injectable()
 export class PostsService {
