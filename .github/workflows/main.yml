@@ -76,6 +76,7 @@ jobs:
             -p $APP_PORT:$CONTAINER_PORT \
             -v $HOME/9term-main-back/certbot/www:/var/www/certbot \
             -v $HOME/9term-main-back/certbot/conf:/etc/letsencrypt \
+            --env-file /home/ubuntu/9term-main-back/.env \
             $DOCKER_IMAGE_NAME:latest
 
           echo "Docker 컨테이너가 성공적으로 시작되었습니다."
