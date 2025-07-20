@@ -12,12 +12,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { ApiComments } from './comment.swagger';
 import { CommentsService } from './comments.service';
-import { CreateCommentDto } from './dto/create-comment.dto';
-import { UpdateCommentDto } from './dto/update-comment.dto';
+import { CreateCommentDto } from './dto/requests/create-comment.dto';
+import { UpdateCommentDto } from './dto/requests/update-comment.dto';
+import { ApiResponseDto } from './dto/responses/api-response.dto';
+import { ResCommentDto } from './dto/responses/res-comment.dto';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
@@ -33,7 +36,7 @@ export class CommentsController {
     @Param('postId', ParseIntPipe) postId: number,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
-  ) {
+  ): Promise<ApiResponseDto<ResCommentDto>> {
     const user = req.user as { userId: number };
     const userId = user.userId;
     const created = await this.commentsService.createComment(
@@ -45,7 +48,9 @@ export class CommentsController {
     return {
       status: 'success',
       message: '댓글이 성공적으로 생성되었습니다.',
-      data: created,
+      data: plainToInstance(ResCommentDto, created, {
+        excludeExtraneousValues: true,
+      }),
     };
   }
 
@@ -55,7 +60,7 @@ export class CommentsController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
     @Query('parentId', new ParseIntPipe({ optional: true })) parentId?: number,
-  ) {
+  ): Promise<ApiResponseDto<ResCommentDto[]>> {
     const comments = await this.commentsService.getCommentsByPost(
       postId,
       groupId,
@@ -64,7 +69,9 @@ export class CommentsController {
     return {
       status: 'success',
       message: '댓글이 성공적으로 조회되었습니다.',
-      data: comments,
+      data: plainToInstance(ResCommentDto, comments, {
+        excludeExtraneousValues: true,
+      }),
     };
   }
 
@@ -76,7 +83,7 @@ export class CommentsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCommentDto: UpdateCommentDto,
     @Req() req: Request,
-  ) {
+  ): Promise<ApiResponseDto<ResCommentDto>> {
     const user = req.user as { userId: number };
     const userId = user.userId;
     const updated = await this.commentsService.updateComment(
@@ -89,7 +96,9 @@ export class CommentsController {
     return {
       status: 'success',
       message: '댓글이 성공적으로 수정되었습니다.',
-      data: updated,
+      data: plainToInstance(ResCommentDto, updated, {
+        excludeExtraneousValues: true,
+      }),
     };
   }
 
@@ -100,19 +109,14 @@ export class CommentsController {
     @Param('postId', ParseIntPipe) postId: number,
     @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
-  ) {
+  ): Promise<ApiResponseDto<null>> {
     const user = req.user as { userId: number };
     const userId = user.userId;
-    const deleted = await this.commentsService.deleteComment(
-      id,
-      userId,
-      groupId,
-      postId,
-    );
+    await this.commentsService.deleteComment(id, userId, groupId, postId);
     return {
       status: 'success',
       message: '댓글이 성공적으로 삭제되었습니다.',
-      data: deleted,
+      data: null,
     };
   }
 }
