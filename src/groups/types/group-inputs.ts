@@ -1,3 +1,5 @@
+import { UserGroupRole } from '@prisma/client';
+
 export interface CreateGroupInput {
   name: string;
   description: string;
@@ -7,10 +9,11 @@ export interface CreateGroupInput {
 export interface GroupUserInput {
   userId: number;
   groupId: number;
-  role: 'admin' | 'member';
+  role: UserGroupRole;
 }
 
 export interface UpdateGroupInput {
   name?: string;
   description?: string;
+  groupImgUrl?: string;
 }

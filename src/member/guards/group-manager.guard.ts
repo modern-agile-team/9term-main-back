@@ -1,13 +1,13 @@
 import {
   CanActivate,
   ExecutionContext,
-  Injectable,
   ForbiddenException,
+  Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { MembersService } from '../member.service';
 import { Request } from 'express';
 import { GroupMember } from '../interfaces/member.interface';
+import { MembersService } from '../member.service';
 
 @Injectable()
 export class GroupManagerGuard implements CanActivate {
@@ -25,7 +25,7 @@ export class GroupManagerGuard implements CanActivate {
       throw new InternalServerErrorException('groupId 값이 필요합니다.');
     }
     const member = await this.membersService.getGroupMember(groupId, userId);
-    if (!member || (member.role !== 'manager' && member.role !== 'admin')) {
+    if (!member || (member.role !== 'MEMBER' && member.role !== 'MANAGER')) {
       throw new ForbiddenException(
         '이 그룹의 매니저 또는 어드민만 접근할 수 있습니다.',
       );

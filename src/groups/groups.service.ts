@@ -1,18 +1,18 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { GroupResponseDto } from './dto/group-response.dto';
+import { GroupUserResponseDto } from './dto/group-user-response.dto';
+import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsRepository } from './groups.repository';
-import { plainToInstance } from 'class-transformer';
-import { GroupResponseDto } from './dto/group-response.dto';
-import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
-import { GroupJoinStatusDto } from './dto/group-join-status.dto';
-import { GroupUserResponseDto } from './dto/group-user-response.dto';
 import {
   CreateGroupInput,
   GroupUserInput,
@@ -124,7 +124,7 @@ export class GroupsService {
     const groupUserData: GroupUserInput = {
       userId,
       groupId,
-      role: 'member',
+      role: 'MEMBER',
     };
 
     const createdGroupUser =
@@ -149,7 +149,7 @@ export class GroupsService {
       groupId,
       userId,
     );
-    if (!userGroup || userGroup.role !== 'admin') {
+    if (!userGroup || userGroup.role !== 'MANAGER') {
       throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
     }
 

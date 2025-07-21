@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Group, UserGroup } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateGroupInput,
   GroupUserInput,
   UpdateGroupInput,
 } from './types/group-inputs';
-import { Group, UserGroup } from '@prisma/client';
 
 @Injectable()
 export class GroupsRepository {
@@ -28,7 +28,7 @@ export class GroupsRepository {
         data: {
           userId: data.userId,
           groupId: group.id,
-          role: 'admin',
+          role: 'MANAGER',
         },
       });
 

@@ -17,7 +17,7 @@ export class MembersService {
     });
 
     return members
-      .filter((member) => member.role !== 'admin')
+      .filter((member) => member.role !== 'MANAGER')
       .map((member) => ({
         userId: member.userId,
         name: member.user.name,
@@ -54,7 +54,7 @@ export class MembersService {
       },
     });
 
-    if (!requester || requester.role !== 'manager') {
+    if (!requester || requester.role !== 'MANAGER') {
       throw new ForbiddenException('매니저만 멤버를 삭제할 수 있습니다.');
     }
 
