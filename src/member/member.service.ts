@@ -1,12 +1,12 @@
 import {
-  Injectable,
-  NotFoundException,
   ConflictException,
+  Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { MemberRepository } from './member.repository';
 import { JoinMemberRequestDto } from './dto/member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
+import { MemberRepository } from './member.repository';
 
 @Injectable()
 export class MembersService {

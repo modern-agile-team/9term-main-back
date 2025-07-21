@@ -13,70 +13,117 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserGroupRole {
+MEMBER  
+MANAGER   
+}
+
+enum MembershipStatus {
+PENDING    
+APPROVED   
+REJECTED   
+LEFT       
+}
+
+enum PostCategory {
+NORMAL       
+ANNOUNCEMENT 
+}
+
 model User {
   id           Int           @id @default(autoincrement())
-  userName     String        @map("user_name")  @db.VarChar(20)       // 로그인 시 아이디
+  userName     String        @map("user_name")  @db.VarChar(20)    // 로그인 시 아이디
   password     String        @db.VarChar(60) 
-  name         String        @db.VarChar(50)           // 사용자 이름
+  name         String        @db.VarChar(50)                       // 사용자 이름
+  userImgUrl   String?       @map("user_img_url") @db.VarChar(255)
   createdAt    DateTime      @default(now()) @map("created_at")
+  
   comments     Comment[]
   postLikes    PostLike[]  
   posts        Post[]
   userGroups   UserGroup[] 
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
 
   @@unique([userName])
   @@map("users")
 }
 
 model Group {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(100)
-  description String?
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id           Int         @id @default(autoincrement())
+  name         String      @db.VarChar(100)
+  description  String?
+  groupImgUrl  String?     @map("group_img_url") @db.VarChar(255) 
+  createdAt    DateTime    @default(now()) @map("created_at")
+  
   posts       Post[]
   userGroups  UserGroup[] 
+  notifications Notification[]
 
   @@map("groups")
 }
 
 model UserGroup {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @map("user_id")
-  groupId   Int       @map("group_id")
-  role      String    @default("member")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id        Int                 @id @default(autoincrement())
+  userId    Int                 @map("user_id")
+  groupId   Int                 @map("group_id")
+  role      UserGroupRole       @default(MEMBER)
+  status    MembershipStatus    @default(PENDING)   
+  leftAt    DateTime?           @map("left_at") 
+  createdAt DateTime            @default(now()) @map("created_at")
+  
   group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
+  @@index([groupId, status])
+  @@index([userId, status])
   @@map("user_groups")
 }
 
 model Post {
-  id         Int        @id @default(autoincrement())
-  userId     Int        @map("user_id")
-  groupId    Int        @map("group_id")
-  title      String     @db.VarChar(255)
+  id         Int          @id @default(autoincrement())
+  userId     Int          @map("user_id")
+  groupId    Int          @map("group_id")
+  title      String       @db.VarChar(255)
   content    String
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime?  @map("updated_at")
+  category   PostCategory @default(NORMAL)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime?    @map("updated_at")
+  
   comments   Comment[]
   postLikes  PostLike[] 
+  postImages PostImage[]
+  notifications Notification[]
+
   group      Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("posts")
+ 
   @@index([groupId, createdAt])
+  @@map("posts")
+}
+
+model PostImage {
+  id            Int           @id @default(autoincrement())
+  postId        Int           @map("post_id")
+  postImgUrl    String        @map("post_img_url") @db.VarChar(255)
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, postImgUrl])
+  @@map("post_images") 
 }
 
 model PostLike {
   id     Int   @id @default(autoincrement())
   postId Int   @map("post_id")
   userId Int   @map("user_id")
+
   post   Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
   user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+  @@index([postId])
   @@map("post_likes")
 }
 
@@ -88,12 +135,37 @@ model Comment {
   parentId  Int?       @map("parent_id")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime?  @map("updated_at")
+
   parent    Comment?   @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
   children  Comment[]  @relation("replies")
   post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
+  
   @@index([postId])  
   @@index([parentId])
+  @@map("comments")
 }
+
+
+enum NotificationType {
+  NEW_POST_IN_GROUP      
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  recipientId Int              @map("recipient_id")      
+  groupId     Int              @map("group_id")             
+  postId      Int              @map("post_id")           
+  type        NotificationType
+  message     String           @db.VarChar(100)
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  recipient   User             @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  group       Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  post        Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+ 
+ @@index([recipientId, createdAt])  
+ @@map("notifications") 
+}
+

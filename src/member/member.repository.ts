@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserGroup } from './interfaces/member.interface';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class MemberRepository {
@@ -35,7 +35,10 @@ export class MemberRepository {
 
   async createMember(data: { groupId: number; userId: number; role: string }) {
     return this.prisma.userGroup.create({
-      data,
+      data: {
+        groupId: data.groupId,
+        userId: data.userId,
+      },
       include: {
         user: true,
       },
