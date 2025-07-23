@@ -95,7 +95,7 @@ export class AuthService {
           'JWT_ACCESS_EXPIRES_IN',
         ),
       });
-      const newRefreshPayload = { sub: user.userName };
+      const newRefreshPayload = { sub: user.id, userName: user.userName };
       const newRefreshToken = this.jwtService.sign(newRefreshPayload, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.getOrThrow<string>(

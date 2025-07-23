@@ -59,7 +59,6 @@ export class AuthController {
       message: '로그인에 성공했습니다.',
       data: {
         accessToken,
-        refreshToken,
       },
     };
   }
@@ -91,7 +90,6 @@ export class AuthController {
       message: 'Access Token 재발급에 성공했습니다.',
       data: {
         accessToken,
-        refreshToken: newRefreshToken,
       },
     };
   }

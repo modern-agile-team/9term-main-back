@@ -1,4 +1,4 @@
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, Length, Matches, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginRequestDto {
@@ -12,6 +12,7 @@ export class LoginRequestDto {
   @Matches(/^[a-zA-Z0-9]+$/, {
     message: 'userName은 영문자와 숫자만 포함할 수 있습니다.',
   })
+  @IsNotEmpty({ message: 'userName은 필수값입니다.' })
   userName: string;
 
   @ApiProperty({
@@ -19,5 +20,6 @@ export class LoginRequestDto {
     description: '비밀번호',
   })
   @IsString()
+  @IsNotEmpty({ message: 'password는 필수값입니다.' })
   password: string;
 }

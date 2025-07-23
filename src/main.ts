@@ -9,7 +9,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      stopAtFirstError: true,
+    }),
+  );
 
   const reflector = app.get<Reflector>(Reflector);
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
