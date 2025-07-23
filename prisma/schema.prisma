@@ -52,21 +52,42 @@ model UserGroup {
   @@map("user_groups")
 }
 
-model Post {
-  id         Int        @id @default(autoincrement())
-  userId     Int        @map("user_id")
-  groupId    Int        @map("group_id")
-  title      String     @db.VarChar(255)
-  content    String
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime?  @map("updated_at")
-  comments   Comment[]
-  postLikes  PostLike[] 
-  group      Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+enum PostCategory {
+  NORMAL
+  ANNOUNCEMENT
+}
 
-  @@map("posts")
+model Post {
+  id         Int          @id @default(autoincrement())
+  userId     Int          @map("user_id")
+  groupId    Int          @map("group_id")
+  title      String       @db.VarChar(255)
+  content    String
+  category   PostCategory @default(NORMAL)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime?    @map("updated_at")
+
+  comments      Comment[]
+  postLikes     PostLike[]
+  postImages    PostImage[]
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([groupId, createdAt])
+  @@map("posts")
+}
+
+model PostImage {
+  id         Int      @id @default(autoincrement())
+  postId     Int      @map("post_id")
+  postImgUrl String   @map("post_img_url") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, postImgUrl])
+  @@map("post_images")
 }
 
 model PostLike {

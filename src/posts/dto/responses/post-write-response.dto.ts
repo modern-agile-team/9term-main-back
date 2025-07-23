@@ -33,4 +33,13 @@ export class PostWriteResponseDto {
   })
   @Expose()
   updatedAt: Date | null;
+
+  @ApiProperty({
+    example:
+      'https://your-bucket.s3.ap-northeast-2.amazonaws.com/posts/uuid.jpeg',
+    description: '게시물 이미지 URL (Presigned URL)',
+    nullable: true,
+  })
+  @Expose()
+  imageUrl: string | null;
 }

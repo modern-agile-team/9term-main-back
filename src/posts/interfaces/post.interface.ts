@@ -15,8 +15,18 @@ export interface PostWithUser extends Post {
   };
 }
 
+export interface PostWithUserAndCount extends PostWithUser {
+  _count: {
+    comments: number;
+  };
+  postImages: {
+    postImgUrl: string;
+  }[];
+}
+
 export interface PostWithCommentCount extends PostWithUser {
   commentsCount: number;
+  imageUrl?: string | null;
 }
 
 export interface CreatePostData {
@@ -29,10 +39,4 @@ export interface CreatePostData {
 export interface UpdatePostData {
   title?: string;
   content?: string;
-}
-
-export interface PostWithUserAndCount extends PostWithUser {
-  _count: {
-    comments: number;
-  };
 }
