@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Comment } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ICommentsRepository } from './interfaces/comments.repository.interface';
 
 @Injectable()
-export class CommentsRepository {
+export class CommentsRepository implements ICommentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findCommentById(id: number) {
+  findCommentById(id: number): Promise<Comment | null> {
     return this.prisma.comment.findUnique({ where: { id } });
   }
 
@@ -14,7 +16,7 @@ export class CommentsRepository {
     userId: number;
     postId: number;
     parentId?: number | null;
-  }) {
+  }): Promise<Comment> {
     return this.prisma.comment.create({
       data: {
         content: data.content,
@@ -25,13 +27,17 @@ export class CommentsRepository {
     });
   }
 
-  findComments(postId: number, parentId: number | null = null) {
+  findComments(
+    postId: number,
+    parentId: number | null = null,
+  ): Promise<(Comment & { user: { id: number; name: string } })[]> {
     return this.prisma.comment.findMany({
       where: { postId, parentId },
       orderBy: { createdAt: 'asc' }, // 댓글 오름차순 정렬
       include: {
         user: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -39,13 +45,7 @@ export class CommentsRepository {
     });
   }
 
-  countByPostId(postId: number): Promise<number> {
-    return this.prisma.comment.count({
-      where: { postId },
-    });
-  }
-
-  updateComment(id: number, content: string) {
+  updateComment(id: number, content: string): Promise<Comment> {
     return this.prisma.comment.update({
       where: { id },
       data: {
@@ -55,7 +55,7 @@ export class CommentsRepository {
     });
   }
 
-  deleteComment(id: number) {
+  deleteComment(id: number): Promise<Comment> {
     return this.prisma.comment.delete({ where: { id } });
   }
 }
