@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { CommentsModule } from 'src/comments/comments.module';
+import { S3Module } from 'src/s3/s3.module';
 import { PostsController } from './posts.controller';
 import { PostsRepository } from './posts.repository';
 import { PostsService } from './posts.service';
 
 @Module({
-  imports: [CommentsModule],
+  imports: [S3Module],
   controllers: [PostsController],
   providers: [PostsService, PostsRepository],
   exports: [PostsRepository],

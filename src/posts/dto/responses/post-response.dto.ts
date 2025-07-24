@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { UserInfoDto } from '../user-info.dto';
 
-// post-response.dto.ts
 export class PostResponseDto {
   @ApiProperty({ example: 1, description: '게시물 ID' })
   @Expose()
@@ -44,4 +43,13 @@ export class PostResponseDto {
   @ApiProperty({ example: 3, required: false, description: '댓글 수' })
   @Expose()
   commentsCount: number;
+
+  @ApiProperty({
+    example:
+      'https://your-bucket.s3.ap-northeast-2.amazonaws.com/posts/uuid.jpeg',
+    description: '게시물 이미지 URL (Presigned URL)',
+    nullable: true,
+  })
+  @Expose()
+  imageUrl: string | null;
 }
