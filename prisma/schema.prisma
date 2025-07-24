@@ -81,12 +81,12 @@ model Post {
 model PostImage {
   id         Int      @id @default(autoincrement())
   postId     Int      @map("post_id")
-  postImgUrl String   @map("post_img_url") @db.VarChar(255)
+  postImgPath String   @map("post_img_url") @db.VarChar(255)
   createdAt  DateTime @default(now()) @map("created_at")
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@unique([postId, postImgUrl])
+  @@unique([postImgPath])
   @@map("post_images")
 }
 

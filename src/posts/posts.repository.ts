@@ -13,17 +13,17 @@ export class PostsRepository {
 
   async createPostWithImage(
     data: CreatePostData,
-    postImageKey?: string,
+    postImagePath?: string,
   ): Promise<Post> {
     return await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
         const createdPost = await tx.post.create({ data });
 
-        if (postImageKey) {
+        if (postImagePath) {
           await tx.postImage.create({
             data: {
               postId: createdPost.id,
-              postImgUrl: postImageKey,
+              postImgPath: postImagePath,
             },
           });
         }
@@ -43,11 +43,8 @@ export class PostsRepository {
     });
   }
 
-  async deletePostWithImage(id: number): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.postImage.deleteMany({ where: { postId: id } });
-      await tx.post.delete({ where: { id } });
-    });
+  async deletePost(id: number): Promise<void> {
+    await this.prisma.post.delete({ where: { id } });
   }
 
   async findPostsWithCommentsCount(

@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CommentsRepository } from 'src/comments/comments.repository';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 import {
@@ -13,14 +12,13 @@ import {
   PostWithCommentCount,
 } from './interfaces/post.interface';
 import { PostsRepository } from './posts.repository';
-import { S3_FOLDER } from 'src/s3/s3.constants';
+import { S3ObjectType } from 'src/s3/s3.types';
 import { S3Service } from 'src/s3/s3.service';
 
 @Injectable()
 export class PostsService {
   constructor(
     private readonly postsRepository: PostsRepository,
-    private readonly commentsRepository: CommentsRepository,
     private readonly s3Service: S3Service,
   ) {}
 
@@ -28,15 +26,15 @@ export class PostsService {
     createPostDto: CreatePostRequestDto,
     groupId: number,
     userId: number,
-    uploadedFile?: Express.Multer.File,
+    fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
-    let postImageKey: string | undefined;
+    let postImagePath: string | undefined;
 
     try {
-      if (uploadedFile) {
-        postImageKey = await this.s3Service.uploadFile(
-          uploadedFile,
-          S3_FOLDER.POST,
+      if (fileToUpload) {
+        postImagePath = await this.s3Service.uploadFile(
+          fileToUpload,
+          S3ObjectType.POST,
         );
       }
 
@@ -49,11 +47,11 @@ export class PostsService {
 
       return await this.postsRepository.createPostWithImage(
         createPostData,
-        postImageKey,
+        postImagePath,
       );
     } catch (err) {
-      if (postImageKey) {
-        await this.s3Service.deleteFile(postImageKey);
+      if (postImagePath) {
+        await this.s3Service.deleteFile(postImagePath);
       }
       throw err;
     }
@@ -65,19 +63,16 @@ export class PostsService {
     const posts =
       await this.postsRepository.findPostsWithCommentsCount(groupId);
 
-    return await Promise.all(
-      posts.map(async (post) => {
-        const imageUrl = post.postImages?.[0]?.postImgUrl
-          ? await this.s3Service.getPresignedUrl(post.postImages[0].postImgUrl)
-          : null;
+    return posts.map((post) => {
+      const imagePath = post.postImages?.[0]?.postImgPath;
+      const imageUrl = imagePath ? this.s3Service.getFileUrl(imagePath) : null;
 
-        return {
-          ...post,
-          commentsCount: post._count.comments,
-          imageUrl,
-        };
-      }),
-    );
+      return {
+        ...post,
+        commentsCount: post._count.comments,
+        imageUrl,
+      };
+    });
   }
 
   async getPostById(id: number): Promise<PostWithCommentCount> {
@@ -86,9 +81,8 @@ export class PostsService {
       throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
     }
 
-    const imageUrl = post.postImages?.[0]?.postImgUrl
-      ? await this.s3Service.getPresignedUrl(post.postImages[0].postImgUrl)
-      : null;
+    const imagePath = post.postImages?.[0]?.postImgPath;
+    const imageUrl = imagePath ? this.s3Service.getFileUrl(imagePath) : null;
 
     return {
       ...post,
@@ -128,9 +122,9 @@ export class PostsService {
     }
 
     if (post.postImages?.[0]) {
-      await this.s3Service.deleteFile(post.postImages[0].postImgUrl);
+      await this.s3Service.deleteFile(post.postImages[0].postImgPath);
     }
 
-    await this.postsRepository.deletePostWithImage(id);
+    await this.postsRepository.deletePost(id);
   }
 }
