@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CommentsRepository } from 'src/comments/comments.repository';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 import {
@@ -16,10 +15,7 @@ import { PostsRepository } from './posts.repository';
 
 @Injectable()
 export class PostsService {
-  constructor(
-    private readonly postsRepository: PostsRepository,
-    private readonly commentsRepository: CommentsRepository,
-  ) {}
+  constructor(private readonly postsRepository: PostsRepository) {}
 
   async createPost(
     createPostDto: CreatePostRequestDto,

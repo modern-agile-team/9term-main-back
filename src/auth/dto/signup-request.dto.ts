@@ -1,4 +1,10 @@
-import { IsString, Length, Matches, MinLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  Length,
+  Matches,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SignupRequestDto {
@@ -15,6 +21,7 @@ export class SignupRequestDto {
     message:
       'userName은 숫자만으로 구성될 수 없으며, 영문자와 숫자만 사용할 수 있습니다.',
   })
+  @IsNotEmpty({ message: 'userName은 필수값입니다.' })
   userName: string;
 
   @ApiProperty({
@@ -23,10 +30,11 @@ export class SignupRequestDto {
     minLength: 2,
     maxLength: 30,
   })
-  @IsString()
   @Length(2, 30, {
     message: '이름은 2자 이상 30자 이하로 입력해주세요.',
   })
+  @IsNotEmpty({ message: 'name은 빈 문자열을 허용하지 않습니다.' })
+  @IsString()
   name: string;
 
   @ApiProperty({
@@ -34,7 +42,8 @@ export class SignupRequestDto {
     description: '비밀번호 (8자 이상)',
     minLength: 8,
   })
-  @IsString()
   @MinLength(8, { message: '비밀번호는 8자 이상이어야 합니다.' })
+  @IsNotEmpty({ message: 'password는 빈 문자열을 허용하지 않습니다.' })
+  @IsString()
   password: string;
 }
