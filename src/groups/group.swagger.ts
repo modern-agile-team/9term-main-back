@@ -1,15 +1,15 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiOperation,
   ApiResponse,
-  ApiExtraModels,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiResponseDto } from './dto/api-response.dto';
-import { GroupResponseDto } from './dto/group-response.dto';
-import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupUserResponseDto } from './dto/group-user-response.dto';
+import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 
 const unauthorizedResponse = () =>
   ApiResponse({

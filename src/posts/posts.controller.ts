@@ -11,17 +11,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
-import { ApiPosts } from './post.swagger';
-import { PostsService } from './posts.service';
-import { ApiResponseDto } from 'src/groups/dto/api-response.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
-import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
-import { plainToInstance } from 'class-transformer';
+import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
+import { ApiPosts } from './post.swagger';
+import { PostsService } from './posts.service';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;

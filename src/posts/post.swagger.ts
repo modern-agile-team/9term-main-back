@@ -5,7 +5,7 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiResponseDto } from './dto/responses/api-response.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
 import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
 
