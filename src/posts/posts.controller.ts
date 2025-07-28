@@ -8,14 +8,19 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
+
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
@@ -34,26 +39,30 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('postImage'))
+  @ApiConsumes('multipart/form-data')
   @ApiPosts.create()
   async createPost(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() dto: CreatePostRequestDto,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req: AuthenticatedRequest,
   ): Promise<ApiResponseDto<PostWriteResponseDto>> {
     const userId = req.user.userId;
+
     const createdPost = await this.postsService.createPost(
       dto,
       groupId,
       userId,
+      file,
     );
 
     const createdPostResponse = plainToInstance(
       PostWriteResponseDto,
       createdPost,
-      {
-        excludeExtraneousValues: true,
-      },
+      { excludeExtraneousValues: true },
     );
+
     return {
       status: 'success',
       message: '게시물이 성공적으로 생성되었습니다.',
@@ -110,9 +119,7 @@ export class PostsController {
     const updatedPostResponse = plainToInstance(
       PostWriteResponseDto,
       updatedPost,
-      {
-        excludeExtraneousValues: true,
-      },
+      { excludeExtraneousValues: true },
     );
 
     return {
