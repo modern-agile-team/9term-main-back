@@ -13,6 +13,7 @@ export class ApiResponseDto<T = any> {
   @ApiProperty({
     description: '응답 데이터',
     example: {},
+    nullable: true,
   })
   data: T;
 }
