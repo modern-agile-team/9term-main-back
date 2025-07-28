@@ -15,11 +15,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ApiComments } from './comment.swagger';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/requests/create-comment.dto';
 import { UpdateCommentDto } from './dto/requests/update-comment.dto';
-import { ApiResponseDto } from './dto/responses/api-response.dto';
 import { ResCommentDto } from './dto/responses/res-comment.dto';
 
 @ApiTags('Comments')
