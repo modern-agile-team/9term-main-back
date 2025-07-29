@@ -19,10 +19,10 @@ export class SignupRequestDto {
   @Length(4, 20)
   @Matches(/^(?!\d+$)[a-zA-Z0-9]+$/, {
     message:
-      'userName은 숫자만으로 구성될 수 없으며, 영문자와 숫자만 사용할 수 있습니다.',
+      'username은 숫자만으로 구성될 수 없으며, 영문자와 숫자만 사용할 수 있습니다.',
   })
-  @IsNotEmpty({ message: 'userName은 필수값입니다.' })
-  userName: string;
+  @IsNotEmpty({ message: 'username은 필수값입니다.' })
+  username: string;
 
   @ApiProperty({
     example: '홍길동',
