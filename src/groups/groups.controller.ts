@@ -21,7 +21,7 @@ import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { Request } from 'express';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
-import { ApiGroups } from './group.swagger'; // Swagger 유틸
+import { ApiGroups } from './group.swagger';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;

@@ -6,7 +6,7 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiResponseDto } from './dto/responses/api-response.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ResCommentDto } from './dto/responses/res-comment.dto';
 
 // 공통 Unauthorized
