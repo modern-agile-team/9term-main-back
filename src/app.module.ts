@@ -9,6 +9,7 @@ import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { MemberModule } from './member/member.module';
 import { GroupsModule } from './groups/groups.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { GroupsModule } from './groups/groups.module';
     PostsModule,
     MemberModule,
     CommentsModule,
+    S3Module,
     GroupsModule,
     ConfigModule.forRoot({
       isGlobal: true,
