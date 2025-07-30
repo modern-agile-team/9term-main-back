@@ -5,7 +5,7 @@ import {
   GroupUserInput,
   UpdateGroupInput,
 } from './types/group-inputs';
-import { Group, UserGroup } from '@prisma/client';
+import { Group, UserGroup, UserGroupRole } from '@prisma/client';
 
 @Injectable()
 export class GroupsRepository {
@@ -28,7 +28,7 @@ export class GroupsRepository {
         data: {
           userId: data.userId,
           groupId: group.id,
-          role: 'admin',
+          role: UserGroupRole.MANAGER,
         },
       });
 

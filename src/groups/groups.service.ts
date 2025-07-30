@@ -15,6 +15,7 @@ import { GroupJoinStatusDto } from './dto/group-join-status.dto';
 import { GroupUserResponseDto } from './dto/group-user-response.dto';
 import { CreateGroupInput, UpdateGroupInput } from './types/group-inputs';
 import { MembersService } from '../member/member.service';
+import { UserGroupRole } from '@prisma/client';
 
 @Injectable()
 export class GroupsService {
@@ -130,7 +131,7 @@ export class GroupsService {
       groupId,
       userId,
     );
-    if (!userGroup || userGroup.role !== 'admin') {
+    if (!userGroup || userGroup.role !== UserGroupRole.MANAGER) {
       throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
     }
 

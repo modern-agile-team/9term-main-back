@@ -19,8 +19,8 @@ export class AuthService {
 
   // 회원가입
   async signup(signupRequestDto: SignupRequestDto): Promise<void> {
-    const existingUser = await this.userRepository.findByUserName(
-      signupRequestDto.userName,
+    const existingUser = await this.userRepository.findByUsername(
+      signupRequestDto.username,
     );
     if (existingUser) {
       throw new BadRequestException('이미 사용 중인 아이디입니다.');
@@ -29,7 +29,7 @@ export class AuthService {
       signupRequestDto.password,
     );
     await this.userRepository.createUser({
-      userName: signupRequestDto.userName,
+      username: signupRequestDto.username,
       name: signupRequestDto.name,
       password: hashedPassword,
     });
@@ -40,8 +40,8 @@ export class AuthService {
     accessToken: string;
     refreshToken: string;
   }> {
-    const user = await this.userRepository.findByUserName(
-      loginRequestDto.userName,
+    const user = await this.userRepository.findByUsername(
+      loginRequestDto.username,
     );
     if (!user) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
@@ -55,7 +55,7 @@ export class AuthService {
     }
     const payload: JwtPayload = {
       sub: user.id,
-      userName: user.userName,
+      username: user.username,
       name: user.name,
     };
     const accessToken = this.jwtService.sign(payload, {
@@ -80,13 +80,13 @@ export class AuthService {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      const user = await this.userRepository.findByUserName(payload.userName);
+      const user = await this.userRepository.findByUsername(payload.username);
       if (!user) {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }
       const newAccessPayload = {
         sub: user.id,
-        userName: user.userName,
+        username: user.username,
         name: user.name,
       };
       const accessToken = this.jwtService.sign(newAccessPayload, {
