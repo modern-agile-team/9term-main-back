@@ -27,62 +27,114 @@ const UnauthorizedExamples = () =>
     },
   });
 
-const NotFoundExamples = () =>
+const getBaseNotFoundExamples = () => ({
+  GroupNotFound: {
+    summary: 'GroupNotFound',
+    value: {
+      message: 'ID가 {groupId}인 그룹을 찾을 수 없습니다.',
+      error: 'Not Found',
+      statusCode: 404,
+    },
+  },
+  PostNotFound: {
+    summary: 'PostNotFound',
+    value: {
+      message: 'ID가 {postId}인 게시물을 찾을 수 없습니다.',
+      error: 'Not Found',
+      statusCode: 404,
+    },
+  },
+  PostGroupMismatch: {
+    summary: 'PostGroupMismatch',
+    value: {
+      message:
+        'ID가 {postId}인 게시물은 ID가 {groupId}인 그룹에 속한 게시물이 아닙니다.',
+      error: 'Not Found',
+      statusCode: 404,
+    },
+  },
+});
+
+const getLikeNotFoundExample = () => ({
+  LikeNotFound: {
+    summary: 'LikeNotFound',
+    value: {
+      message: '해당 게시물에 좋아요를 누르지 않았습니다.',
+      error: 'Not Found',
+      statusCode: 404,
+    },
+  },
+});
+
+const NotFoundExamples = (includeLikedNotFound: boolean) =>
   ApiResponse({
     status: 404,
-    description: '그룹 또는 게시물이 존재하지 않음',
+    description: includeLikedNotFound
+      ? '그룹, 게시물 또는 좋아요가 존재하지 않음'
+      : '그룹 또는 게시물이 존재하지 않음',
     content: {
       'application/json': {
         examples: {
-          GroupNotFound: {
-            summary: 'GroupNotFound',
-            value: {
-              message: '존재하지 않는 그룹입니다.',
-              error: 'Not Found',
-              statusCode: 404,
-            },
-          },
-          PostNotFound: {
-            summary: 'PostNotFound',
-            value: {
-              message: '존재하지 않는 게시물입니다.',
-              error: 'Not Found',
-              statusCode: 404,
-            },
-          },
-          PostGroupMismatch: {
-            summary: 'PostGroupMismatch',
-            value: {
-              message:
-                'ID가 {postId}인 게시물은 ID가 {groupId}인 그룹에 속한 게시물이 아닙니다.',
-              error: 'Not Found',
-              statusCode: 404,
-            },
-          },
+          ...getBaseNotFoundExamples(),
+          ...(includeLikedNotFound ? getLikeNotFoundExample() : {}),
         },
       },
     },
   });
 
-const ToggleLikeResponses = () =>
+const ConflictExamples = () =>
   ApiResponse({
-    status: 200,
-    description: '좋아요 토글 처리 완료',
+    status: 409,
+    description: '좋아요 중복',
     content: {
       'application/json': {
-        examples: {
-          Liked: {
-            summary: 'Liked',
-            value: {
+        example: {
+          message: '이미 좋아요를 누른 게시물입니다.',
+          error: 'Conflict',
+          statusCode: 409,
+        },
+      },
+    },
+  });
+
+export const ApiLikes = {
+  createLike: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '게시물 좋아요 추가',
+        description: '게시물에 좋아요를 추가합니다.',
+      }),
+      ApiResponse({
+        status: 201,
+        description: '좋아요 추가 완료',
+        content: {
+          'application/json': {
+            example: {
               status: 'success',
               data: {
                 isLiked: true,
               },
             },
           },
-          Unliked: {
-            summary: 'LikeRemoved',
-            value: {
+        },
+      }),
+      NotFoundExamples(false),
+      UnauthorizedExamples(),
+      ConflictExamples(),
+    ),
+
+  deleteLike: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '게시물 좋아요 취소',
+        description: '게시물에 좋아요를 취소(삭제)합니다.',
+      }),
+      ApiResponse({
+        status: 200,
+        description: '좋아요 취소 완료',
+        content: {
+          'application/json': {
+            example: {
               status: 'success',
               data: {
                 isLiked: false,
@@ -90,19 +142,8 @@ const ToggleLikeResponses = () =>
             },
           },
         },
-      },
-    },
-  });
-
-export const ApiLikes = {
-  toggleLike: () =>
-    applyDecorators(
-      ApiOperation({
-        summary: '게시물 좋아요',
-        description: '게시물에 좋아요를 누르거나 취소합니다.',
       }),
-      ToggleLikeResponses(),
-      NotFoundExamples(),
+      NotFoundExamples(true),
       UnauthorizedExamples(),
     ),
 };

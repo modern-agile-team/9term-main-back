@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserController } from './auth/user.controller';
 import { CommentsModule } from './comments/comments.module';
 import { GroupsModule } from './groups/groups.module';
-import { PostLikesModule } from './likes/postlikes.module';
+import { PostLikesModule } from './likes/post-likes.module';
 import { MemberModule } from './member/member.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';

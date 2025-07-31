@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Group, Post, PostLike, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { PostLike, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 type TxClient = Prisma.TransactionClient;
@@ -10,30 +10,6 @@ export class PostLikesRepository {
 
   private getClient(tx?: TxClient) {
     return tx ?? this.prisma;
-  }
-
-  // 그룹 조회 메서드
-  async findGroupByIdOrThrow(groupId: number, tx?: TxClient): Promise<Group> {
-    const group = await this.getClient(tx).group.findUnique({
-      where: { id: groupId },
-    });
-    if (!group) {
-      throw new NotFoundException(`ID가 ${groupId}인 그룹을 찾을 수 없습니다.`);
-    }
-    return group;
-  }
-
-  // 게시물 조회 메서드
-  async findPostByIdOrThrow(postId: number, tx?: TxClient): Promise<Post> {
-    const post = await this.getClient(tx).post.findUnique({
-      where: { id: postId },
-    });
-    if (!post) {
-      throw new NotFoundException(
-        `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
-      );
-    }
-    return post;
   }
 
   // 좋아요 기록 조회 메서드
