@@ -57,37 +57,26 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
-      APP_PORT: 8081 # EC2 외부에서 접근할 포트
-      CONTAINER_PORT: 3000 # 컨테이너 포트
       CONTAINER_NAME: modonggu-backend # 컨테이너 이름
 
     steps:
-      - name: Deploy to EC2 and Run Docker Container
+      - name: Pull latest Docker image
         run: |
           echo "최신 도커 이미지 Pull 중..."
           docker pull $DOCKER_IMAGE_NAME:latest
 
-          echo "기존 컨테이너 중지 및 제거 중..." 
-          docker stop $CONTAINER_NAME || true
-          docker rm $CONTAINER_NAME || true
+      - name: Deploy to EC2 and Run Docker Container
+        run: |
+          echo "docker-compose 재시작..."
+          cd /home/ubuntu/9ter-main-back
+          docker-compose down
+          docker-compose up -d
 
-          echo "새로운 컨테이너 시작 중..."
-          docker run -d --restart unless-stopped --name $CONTAINER_NAME \
-            -p $APP_PORT:$CONTAINER_PORT \
-            -v $HOME/9term-main-back/certbot/www:/var/www/certbot \
-            -v $HOME/9term-main-back/certbot/conf:/etc/letsencrypt \
-            --env-file /home/ubuntu/9term-main-back/.env \
-            $DOCKER_IMAGE_NAME:latest
-
-          echo "Docker 컨테이너가 성공적으로 시작되었습니다."
-
-      - name: Simple Integration Test # 통합 테스트
+      - name: Check Container Status
         run: |
           echo "--- 컨테이너 상태 확인 중 ---"
           sleep 20
-
-          CONTAINER_STATUS=$(docker ps --filter "name=$CONTAINER_NAME" --format '{{.Status}}')
-
+          CONTAINER_STATUS=$(docker ps --filter "name=modonggu-backend" --format '{{.Status}}')
           echo "컨테이너 상태: $CONTAINER_STATUS"
 
           if [[ $CONTAINER_STATUS == *"Up"* ]]; then
