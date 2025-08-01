@@ -4,6 +4,7 @@ export interface CreateGroupInput {
   name: string;
   description: string;
   userId: number;
+  groupImagePath?: string;
 }
 
 export interface GroupUserInput {
@@ -15,4 +16,8 @@ export interface GroupUserInput {
 export interface UpdateGroupInput {
   name?: string;
   description?: string;
+}
+
+export interface CreateGroupImageInput {
+  groupImagePath: string;
 }

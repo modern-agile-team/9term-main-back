@@ -1,3 +1,4 @@
+// src/groups/groups.repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
@@ -21,6 +22,7 @@ export class GroupsRepository {
         data: {
           name: data.name,
           description: data.description,
+          groupImgPath: data.groupImagePath,
         },
       });
 
@@ -36,28 +38,25 @@ export class GroupsRepository {
     });
   }
 
-  findAllGroups(): Promise<Group[]> {
+  findAllGroups(): Promise<(Group & { _count: { userGroups: number } })[]> {
     return this.prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { userGroups: true } },
+      },
     });
   }
 
   findGroupById(groupId: number): Promise<Group | null> {
-    return this.prisma.group.findUnique({
-      where: { id: groupId },
-    });
+    return this.prisma.group.findUnique({ where: { id: groupId } });
   }
 
   getMemberCount(groupId: number): Promise<number> {
-    return this.prisma.userGroup.count({
-      where: { groupId },
-    });
+    return this.prisma.userGroup.count({ where: { groupId } });
   }
 
   findGroupUser(groupId: number, userId: number): Promise<UserGroup | null> {
-    return this.prisma.userGroup.findFirst({
-      where: { groupId, userId },
-    });
+    return this.prisma.userGroup.findFirst({ where: { groupId, userId } });
   }
 
   createGroupUser(data: GroupUserInput): Promise<UserGroup> {
@@ -69,5 +68,32 @@ export class GroupsRepository {
       where: { id: groupId },
       data,
     });
+  }
+
+  async findGroupImagePath(groupId: number): Promise<string | null> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { groupImgPath: true },
+    });
+    return group?.groupImgPath ?? null;
+  }
+
+  async setGroupImagePathIfEmpty(
+    groupId: number,
+    imageKey: string,
+  ): Promise<boolean> {
+    const result = await this.prisma.group.updateMany({
+      where: { id: groupId, groupImgPath: null },
+      data: { groupImgPath: imageKey },
+    });
+    return result.count === 1;
+  }
+
+  async clearGroupImagePathIfPresent(groupId: number): Promise<boolean> {
+    const result = await this.prisma.group.updateMany({
+      where: { id: groupId, groupImgPath: { not: null } },
+      data: { groupImgPath: null },
+    });
+    return result.count === 1;
   }
 }

@@ -8,6 +8,9 @@ import {
   UseGuards,
   ParseIntPipe,
   Patch,
+  UseInterceptors,
+  UploadedFile,
+  Delete,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
@@ -22,6 +25,9 @@ import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { Request } from 'express';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { ApiGroups } from './group.swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { CreateGroupImageDto } from './dto/create-group-image.dto';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;
@@ -33,19 +39,27 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('groupImage'))
   @UseGuards(CustomJwtAuthGuard)
   @ApiBearerAuth()
   @ApiGroups.create()
   async createGroup(
     @Body() createGroupDto: CreateGroupDto,
+    @UploadedFile() uploadFile: Express.Multer.File,
     @Req() req: AuthenticatedRequest,
   ): Promise<{ status: string; message: string; data: GroupResponseDto }> {
     const userId = req.user.userId;
-    const group = await this.groupsService.createGroup(createGroupDto, userId);
+
+    const createdGroup = await this.groupsService.createGroup(
+      createGroupDto,
+      userId,
+      uploadFile,
+    );
+
     return {
       status: 'success',
       message: '그룹이 성공적으로 생성되었습니다.',
-      data: group,
+      data: createdGroup,
     };
   }
 
@@ -135,6 +149,46 @@ export class GroupsController {
       status: 'success',
       message: '그룹 정보가 성공적으로 수정되었습니다.',
       data: updatedGroup,
+    };
+  }
+
+  @Post(':groupId/image')
+  @UseGuards(CustomJwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('groupImage'))
+  async createImage(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @UploadedFile() uploadFile: Express.Multer.File,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiResponseDto<CreateGroupImageDto>> {
+    const userId = req.user.userId;
+
+    const createdGroupImage = await this.groupsService.createGroupImage(
+      groupId,
+      userId,
+      uploadFile,
+    );
+
+    return {
+      status: 'success',
+      message: '그룹 이미지가 성공적으로 추가되었습니다.',
+      data: createdGroupImage,
+    };
+  }
+
+  @Delete(':groupId/image')
+  @UseGuards(CustomJwtAuthGuard)
+  @ApiBearerAuth()
+  async deleteImage(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId = req.user.userId;
+    await this.groupsService.deleteGroupImage(groupId, userId);
+
+    return {
+      status: 'success',
+      message: '그룹 이미지가 성공적으로 추가되었습니다.',
     };
   }
 }
