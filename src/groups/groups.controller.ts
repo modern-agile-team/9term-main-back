@@ -8,6 +8,9 @@ import {
   UseGuards,
   ParseIntPipe,
   Patch,
+  UseInterceptors,
+  UploadedFile,
+  Put,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
@@ -22,6 +25,8 @@ import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { Request } from 'express';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { ApiGroups } from './group.swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;
@@ -33,19 +38,27 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('groupImage'))
   @UseGuards(CustomJwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiGroups.create()
   async createGroup(
     @Body() createGroupDto: CreateGroupDto,
+    @UploadedFile() uploadFile: Express.Multer.File,
     @Req() req: AuthenticatedRequest,
   ): Promise<{ status: string; message: string; data: GroupResponseDto }> {
     const userId = req.user.userId;
-    const group = await this.groupsService.createGroup(createGroupDto, userId);
+
+    const createdGroup = await this.groupsService.createGroup(
+      createGroupDto,
+      userId,
+      uploadFile,
+    );
+
     return {
       status: 'success',
       message: '그룹이 성공적으로 생성되었습니다.',
-      data: group,
+      data: createdGroup,
     };
   }
 
@@ -134,6 +147,30 @@ export class GroupsController {
     return {
       status: 'success',
       message: '그룹 정보가 성공적으로 수정되었습니다.',
+      data: updatedGroup,
+    };
+  }
+
+  @Put(':groupId/image')
+  @UseGuards(CustomJwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('groupImage'))
+  async updateGroupImage(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @UploadedFile() uploadFile: Express.Multer.File,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiResponseDto<GroupResponseDto>> {
+    const userId = req.user.userId;
+
+    const updatedGroup = await this.groupsService.upsertGroupImage(
+      groupId,
+      userId,
+      uploadFile,
+    );
+
+    return {
+      status: 'success',
+      message: '그룹 이미지가 성공적으로 변경되었습니다.',
       data: updatedGroup,
     };
   }

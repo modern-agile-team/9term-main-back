@@ -16,4 +16,7 @@ export class GroupJoinStatusDto {
   })
   @Expose()
   role: 'admin' | 'member' | null;
+
+  @Expose()
+  groupImageUrl: string;
 }
