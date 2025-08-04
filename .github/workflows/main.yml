@@ -68,7 +68,7 @@ jobs:
       - name: Deploy to EC2 and Run Docker Container
         run: |
           echo "docker-compose 재시작..."
-          cd /home/ubuntu/9ter-main-back
+          cd /home/ubuntu/9term-main-back
           docker-compose down
           docker-compose up -d
 
@@ -76,7 +76,7 @@ jobs:
         run: |
           echo "--- 컨테이너 상태 확인 중 ---"
           sleep 20
-          CONTAINER_STATUS=$(docker ps --filter "name=modonggu-backend" --format '{{.Status}}')
+          CONTAINER_STATUS=$(docker ps --filter "name=$CONTAINER_NAME" --format '{{.Status}}')
           echo "컨테이너 상태: $CONTAINER_STATUS"
 
           if [[ $CONTAINER_STATUS == *"Up"* ]]; then
