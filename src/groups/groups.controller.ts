@@ -19,7 +19,6 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
-import { GroupUserResponseDto } from './dto/group-user-response.dto';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { Request } from 'express';
@@ -98,33 +97,6 @@ export class GroupsController {
       status: 'success',
       message: `그룹 ID ${groupId}의 정보를 성공적으로 가져왔습니다.`,
       data: groupData,
-    };
-  }
-
-  @Post(':groupId')
-  @UseGuards(CustomJwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiGroups.join()
-  async joinGroup(
-    @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<{
-    status: string;
-    message: string;
-    data: GroupUserResponseDto;
-  }> {
-    const userId = req.user.userId;
-
-    const joinedGroupData = await this.groupsService.joinGroup({
-      userId,
-      groupId,
-      role: 'member',
-    });
-
-    return {
-      status: 'success',
-      message: '가입이 성공적으로 되었습니다!',
-      data: joinedGroupData,
     };
   }
 

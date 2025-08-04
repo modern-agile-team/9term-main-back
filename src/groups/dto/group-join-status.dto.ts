@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { UserGroupRole } from '@prisma/client';
 
 export class GroupJoinStatusDto {
   @ApiProperty({
@@ -11,11 +12,11 @@ export class GroupJoinStatusDto {
 
   @ApiProperty({
     description: '그룹 내 역할 (가입하지 않았을 경우 null)',
-    enum: ['admin', 'member', null],
-    example: 'member',
+    enum: [...Object.values(UserGroupRole), null],
+    example: 'MEMBER',
   })
   @Expose()
-  role: 'admin' | 'member' | null;
+  role: UserGroupRole | null;
 
   @Expose()
   groupImageUrl: string;

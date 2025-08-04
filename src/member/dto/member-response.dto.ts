@@ -15,4 +15,9 @@ export class MemberResponseDto {
     description: '가입 일시',
   })
   joinedAt: Date;
+  @ApiProperty({
+    example: 'APPROVED',
+    description: '멤버십 상태 (예: APPROVED, PENDING, REJECTED)',
+  })
+  status: string;
 }

@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserGroup } from './interfaces/member.interface';
-import { User } from '@prisma/client';
-import { UserGroupRole } from '@prisma/client';
+import {
+  MembershipStatus,
+  UserGroupRole,
+  User,
+  UserGroup as PrismaUserGroup,
+} from '@prisma/client';
 
 @Injectable()
 export class MemberRepository {
@@ -11,38 +14,114 @@ export class MemberRepository {
   async findGroupMember(
     groupId: number,
     userId: number,
-  ): Promise<(UserGroup & { user: User }) | null> {
-    return this.prisma.userGroup.findFirst({
+  ): Promise<(PrismaUserGroup & { user: User }) | null> {
+    return this.prisma.userGroup.findUnique({
+      where: {
+        userId_groupId: {
+          userId,
+          groupId,
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async findMembersByGroup(
+    groupId: number,
+    filters?: {
+      status?: MembershipStatus;
+      role?: UserGroupRole;
+    },
+  ): Promise<(PrismaUserGroup & { user: User })[]> {
+    return this.prisma.userGroup.findMany({
       where: {
         groupId,
-        userId,
+        ...filters,
       },
       include: {
         user: true,
       },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     });
   }
 
-  async findAllMembersByGroup(
-    groupId: number,
-  ): Promise<(UserGroup & { user?: { name: string } })[]> {
-    return this.prisma.userGroup.findMany({
-      where: { groupId },
-      include: {
-        user: true,
-      },
-    });
-  }
-
-  async createMember(data: { groupId: number; userId: number; role: string }) {
+  async createMember(data: {
+    groupId: number;
+    userId: number;
+    role: UserGroupRole;
+    status?: MembershipStatus;
+  }) {
     return this.prisma.userGroup.create({
       data: {
         ...data,
-        role: data.role as UserGroupRole,
+        status: data.status ?? MembershipStatus.APPROVED,
       },
       include: {
         user: true,
       },
+    });
+  }
+
+  async upsertMember(data: {
+    groupId: number;
+    userId: number;
+    role: UserGroupRole;
+    status: MembershipStatus;
+  }) {
+    return this.prisma.userGroup.upsert({
+      where: {
+        userId_groupId: {
+          userId: data.userId,
+          groupId: data.groupId,
+        },
+      },
+      update: {
+        role: data.role,
+        status: data.status,
+        leftAt: null,
+      },
+      create: {
+        ...data,
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async updateMembershipStatus(
+    groupId: number,
+    userId: number,
+    data: {
+      status?: MembershipStatus;
+      leftAt?: Date | null;
+      role?: UserGroupRole;
+    },
+  ) {
+    return this.prisma.userGroup.update({
+      where: {
+        userId_groupId: {
+          userId,
+          groupId,
+        },
+      },
+      data,
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async updateMembershipStatusWithLeftAt(
+    groupId: number,
+    userId: number,
+    status: MembershipStatus,
+  ) {
+    return this.updateMembershipStatus(groupId, userId, {
+      status,
+      leftAt: status === MembershipStatus.LEFT ? new Date() : null,
     });
   }
 

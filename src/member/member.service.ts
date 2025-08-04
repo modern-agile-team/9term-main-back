@@ -7,27 +7,61 @@ import {
 import { MemberRepository } from './member.repository';
 import { JoinMemberRequestDto } from './dto/member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
+import {
+  MembershipStatus,
+  UserGroupRole,
+  User,
+  UserGroup as PrismaUserGroup,
+} from '@prisma/client';
 
 @Injectable()
 export class MembersService {
   constructor(private readonly memberRepository: MemberRepository) {}
 
   async getMemberList(groupId: number): Promise<MemberResponseDto[]> {
-    const members = await this.memberRepository.findAllMembersByGroup(groupId);
+    const members = await this.memberRepository.findMembersByGroup(groupId, {
+      status: MembershipStatus.APPROVED,
+    });
+    return this.transformToResponseDto(members);
+  }
 
-    return members
-      .filter((member) => member.role !== 'admin')
-      .map((member) => {
-        if (!member.user) {
-          throw new InternalServerErrorException('유저 정보가 없습니다.');
-        }
-        return {
-          userId: member.userId,
-          name: member.user.name,
-          role: member.role,
-          joinedAt: member.createdAt,
-        };
-      });
+  async getPendingMembers(groupId: number): Promise<MemberResponseDto[]> {
+    const pendingMembers = await this.memberRepository.findMembersByGroup(
+      groupId,
+      {
+        status: MembershipStatus.PENDING,
+      },
+    );
+
+    return this.transformToResponseDto(pendingMembers);
+  }
+
+  async getAllMembersWithStatus(groupId: number): Promise<MemberResponseDto[]> {
+    const allMembers = await this.memberRepository.findMembersByGroup(groupId);
+
+    return this.transformToResponseDto(allMembers);
+  }
+
+  private transformToResponseDto(
+    members: (PrismaUserGroup & { user: User })[],
+    excludeManager: boolean = false,
+  ): MemberResponseDto[] {
+    const filteredMembers = excludeManager
+      ? members.filter((member) => member.role !== UserGroupRole.MANAGER)
+      : members;
+
+    return filteredMembers.map((member) => {
+      if (!member.user) {
+        throw new InternalServerErrorException('유저 정보가 없습니다.');
+      }
+      return {
+        userId: member.userId,
+        name: member.user.name,
+        role: member.role,
+        joinedAt: member.createdAt,
+        status: member.status,
+      };
+    });
   }
 
   async getGroupMember(
@@ -36,13 +70,14 @@ export class MembersService {
   ): Promise<MemberResponseDto | null> {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
     if (!member) {
-      throw new NotFoundException('그룹 멤버가 존재하지 않습니다.');
+      throw new NotFoundException('멤버가 존재하지 않습니다.');
     }
     return {
       userId: member.userId,
       name: member.user.name,
       role: member.role,
       joinedAt: member.createdAt,
+      status: member.status,
     };
   }
 
@@ -55,39 +90,98 @@ export class MembersService {
       targetUserId,
     );
     if (!targetMember) {
-      throw new NotFoundException('삭제할 멤버가 존재하지 않습니다.');
+      throw new NotFoundException('멤버가 존재하지 않습니다.');
     }
     await this.memberRepository.deleteManyByGroupAndUser(
       targetMember.groupId,
       targetMember.userId,
     );
-    return {
-      message: '삭제가 완료되었습니다.',
-    };
+
+    return { message: '멤버가 강퇴되었습니다.' };
+  }
+
+  async leaveGroup(
+    groupId: number,
+    userId: number,
+  ): Promise<{ message: string }> {
+    const member = await this.memberRepository.findGroupMember(groupId, userId);
+
+    if (!member) {
+      throw new NotFoundException('멤버가 존재하지 않습니다.');
+    }
+
+    if (member.status !== MembershipStatus.APPROVED) {
+      throw new ConflictException('승인된 멤버만 그룹을 탈퇴할 수 있습니다.');
+    }
+
+    if (member.role === UserGroupRole.MANAGER) {
+      throw new ConflictException('그룹 매니저는 탈퇴할 수 없습니다.');
+    }
+
+    await this.memberRepository.updateMembershipStatusWithLeftAt(
+      groupId,
+      userId,
+      MembershipStatus.LEFT,
+    );
+
+    return { message: '그룹을 탈퇴했습니다.' };
   }
 
   async joinGroup(
     dto: JoinMemberRequestDto & { userId: number },
-  ): Promise<MemberResponseDto> {
-    const { groupId, userId, role } = dto;
+  ): Promise<{ message: string }> {
+    const { groupId, userId } = dto;
+
     const existingMembership = await this.memberRepository.findGroupMember(
       groupId,
       userId,
     );
-    if (existingMembership) {
-      throw new ConflictException('이미 이 그룹에 가입되어 있습니다.');
+
+    if (
+      existingMembership &&
+      (existingMembership.status === MembershipStatus.APPROVED ||
+        existingMembership.status === MembershipStatus.PENDING)
+    ) {
+      throw new ConflictException('이미 신청 중이거나 가입된 그룹입니다.');
     }
-    const joinGroupUser = await this.memberRepository.createMember({
+
+    await this.memberRepository.upsertMember({
       groupId,
       userId,
-      role: role ?? 'member',
+      role: UserGroupRole.MEMBER,
+      status: MembershipStatus.PENDING,
     });
 
     return {
-      userId: joinGroupUser.userId,
-      name: joinGroupUser.user.name,
-      role: joinGroupUser.role,
-      joinedAt: joinGroupUser.createdAt,
+      message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
     };
+  }
+
+  async approveMembership(groupId: number, userId: number): Promise<void> {
+    const member = await this.memberRepository.findGroupMember(groupId, userId);
+
+    if (!member || member.status !== MembershipStatus.PENDING) {
+      throw new ConflictException(
+        '가입 신청이 존재하지 않거나 이미 처리되었습니다.',
+      );
+    }
+
+    await this.memberRepository.updateMembershipStatus(groupId, userId, {
+      status: MembershipStatus.APPROVED,
+    });
+  }
+
+  async rejectMembership(groupId: number, userId: number): Promise<void> {
+    const member = await this.memberRepository.findGroupMember(groupId, userId);
+
+    if (!member || member.status !== MembershipStatus.PENDING) {
+      throw new ConflictException(
+        '가입 신청이 존재하지 않거나 이미 처리되었습니다.',
+      );
+    }
+
+    await this.memberRepository.updateMembershipStatus(groupId, userId, {
+      status: MembershipStatus.REJECTED,
+    });
   }
 }

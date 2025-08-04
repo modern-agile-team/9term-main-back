@@ -10,6 +10,7 @@ import {
   Post,
   Body,
   NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { MembersService } from './member.service';
@@ -20,6 +21,7 @@ import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interfa
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinGroupDto } from '../groups/dto/join-group.dto';
 import { MemberSwagger, ApiMembers } from './member.swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('groups/:groupId/members')
 @MemberSwagger()
@@ -28,6 +30,7 @@ export class MembersController {
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get()
+  @ApiBearerAuth('access-token')
   @ApiMembers.getList()
   async getMemberList(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -35,8 +38,27 @@ export class MembersController {
     return this.membersService.getMemberList(groupId);
   }
 
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Get('pending')
+  @ApiBearerAuth('access-token')
+  async getPendingMembers(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ): Promise<MemberResponseDto[]> {
+    return this.membersService.getPendingMembers(groupId);
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Get('all-status')
+  @ApiBearerAuth('access-token')
+  async getAllMembersWithStatus(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ): Promise<MemberResponseDto[]> {
+    return this.membersService.getAllMembersWithStatus(groupId);
+  }
+
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get(':id')
+  @ApiBearerAuth('access-token')
   @ApiMembers.getOne()
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -49,15 +71,15 @@ export class MembersController {
     return member;
   }
 
-  // 그룹 가입
   @UseGuards(CustomJwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post()
   @ApiMembers.join()
   async joinGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() joinGroupDto: JoinGroupDto,
     @Req() req: Request,
-  ): Promise<MemberResponseDto> {
+  ): Promise<{ message: string }> {
     const user = req.user as AuthenticatedUser;
     return this.membersService.joinGroup({
       ...joinGroupDto,
@@ -66,9 +88,31 @@ export class MembersController {
     });
   }
 
-  // 그룹 매니저만 멤버 삭제 가능
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Patch(':id/approve')
+  @ApiBearerAuth('access-token')
+  async approveMember(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    await this.membersService.approveMembership(groupId, userId);
+    return { message: '가입 신청이 승인되었습니다.' };
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Patch(':id/reject')
+  @ApiBearerAuth('access-token')
+  async rejectMember(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    await this.membersService.rejectMembership(groupId, userId);
+    return { message: '가입 신청이 거절되었습니다.' };
+  }
+
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @Delete(':id')
+  @ApiBearerAuth('access-token')
   @ApiMembers.remove()
   async removeMember(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -84,5 +128,16 @@ export class MembersController {
       throw new ForbiddenException('자신을 삭제할 수 없습니다.');
     }
     return this.membersService.removeMember(groupId, id);
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
+  @Post('leave')
+  @ApiBearerAuth('access-token')
+  async leaveGroup(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedUser;
+    return this.membersService.leaveGroup(groupId, user.userId);
   }
 }
