@@ -9,4 +9,7 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
   })
   @Expose()
   memberCount: number;
+
+  @Expose()
+  groupImageUrl: string;
 }
