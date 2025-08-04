@@ -10,7 +10,7 @@ import {
   Patch,
   UseInterceptors,
   UploadedFile,
-  Delete,
+  Put,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
@@ -27,7 +27,6 @@ import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-use
 import { ApiGroups } from './group.swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
-import { CreateGroupImageDto } from './dto/create-group-image.dto';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUserResponse;
@@ -41,7 +40,7 @@ export class GroupsController {
   @Post()
   @UseInterceptors(FileInterceptor('groupImage'))
   @UseGuards(CustomJwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiGroups.create()
   async createGroup(
     @Body() createGroupDto: CreateGroupDto,
@@ -152,18 +151,18 @@ export class GroupsController {
     };
   }
 
-  @Post(':groupId/image')
+  @Put(':groupId/image')
   @UseGuards(CustomJwtAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('groupImage'))
-  async createImage(
+  async updateGroupImage(
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile: Express.Multer.File,
     @Req() req: AuthenticatedRequest,
-  ): Promise<ApiResponseDto<CreateGroupImageDto>> {
+  ): Promise<ApiResponseDto<GroupResponseDto>> {
     const userId = req.user.userId;
 
-    const createdGroupImage = await this.groupsService.createGroupImage(
+    const updatedGroup = await this.groupsService.upsertGroupImage(
       groupId,
       userId,
       uploadFile,
@@ -171,24 +170,8 @@ export class GroupsController {
 
     return {
       status: 'success',
-      message: '그룹 이미지가 성공적으로 추가되었습니다.',
-      data: createdGroupImage,
-    };
-  }
-
-  @Delete(':groupId/image')
-  @UseGuards(CustomJwtAuthGuard)
-  @ApiBearerAuth()
-  async deleteImage(
-    @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const userId = req.user.userId;
-    await this.groupsService.deleteGroupImage(groupId, userId);
-
-    return {
-      status: 'success',
-      message: '그룹 이미지가 성공적으로 추가되었습니다.',
+      message: '그룹 이미지가 성공적으로 변경되었습니다.',
+      data: updatedGroup,
     };
   }
 }

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//// ===== Enums =====
 enum UserGroupRole {
   MEMBER
   MANAGER
@@ -25,58 +20,47 @@ enum MembershipStatus {
   LEFT
 }
 
+//// ===== Models =====
 model User {
-  id         Int      @id @default(autoincrement())
-  username   String   @map("user_name") @db.VarChar(20) // 로그인 시 아이디
-  password   String   @db.VarChar(60)
-  name       String   @db.VarChar(50) // 사용자 이름
-  createdAt  DateTime @default(now()) @map("created_at")
+  id         Int         @id @default(autoincrement())
+  username   String      @unique @map("user_name") @db.VarChar(20)
+  password   String      @db.VarChar(60)
+  name       String      @db.VarChar(50)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  comments   Comment[]
+  postLikes  PostLike[]
+  posts      Post[]
+  userGroups UserGroup[]
 
-  comments              Comment[]
-  postLikes             PostLike[]
-  posts                 Post[]
-  userGroups            UserGroup[]
-
-  @@unique([username])
   @@map("users")
 }
 
 model Group {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String?
-  groupImgPath String?  @map("group_img_path") @db.VarChar(255)
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  posts         Post[]
-  userGroups    UserGroup[]
+  id           Int         @id @default(autoincrement())
+  name         String      @db.VarChar(100)
+  description  String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  groupImgPath String?     @map("group_img_path")        // ← 추가
+  posts        Post[]
+  userGroups   UserGroup[]
 
   @@map("groups")
 }
 
 model UserGroup {
-  id        Int              @id @default(autoincrement())
-  userId    Int              @map("user_id")
-  groupId   Int              @map("group_id")
-  role      UserGroupRole    @default(MEMBER)
-  status    MembershipStatus @default(PENDING)
-  leftAt    DateTime?        @map("left_at")
-  createdAt DateTime         @default(now()) @map("created_at")
+  id        Int               @id @default(autoincrement())
+  userId    Int               @map("user_id")
+  groupId   Int               @map("group_id")
+  role      UserGroupRole                                 // ← String → enum
+  status    MembershipStatus   @default(PENDING)          // ← 추가
+  leftAt    DateTime?          @map("left_at")            // ← 추가
+  createdAt DateTime           @default(now()) @map("created_at")
 
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
-  @@index([groupId, status]) // 특정 그룹의 멤버 상태별 조회 (예: 가입 대기 멤버)
-  @@index([userId, status])  // 특정 유저의 가입 그룹 상태별 조회 (예: 유저가 가입 대기 중인 그룹)
-  @@index([groupId]) // 특정 그룹의 모든 멤버를 조회할 때 (status 필터링 없이)
-  @@index([userId])  // 특정 유저가 속한 모든 그룹을 조회할 때 (status 필터링 없이)
   @@map("user_groups")
-}
-
-enum PostCategory {
-  NORMAL
-  ANNOUNCEMENT
 }
 
 model Post {
@@ -85,43 +69,38 @@ model Post {
   groupId    Int          @map("group_id")
   title      String       @db.VarChar(255)
   content    String
-  category   PostCategory @default(NORMAL)
   createdAt  DateTime     @default(now()) @map("created_at")
   updatedAt  DateTime?    @map("updated_at")
-
-  comments      Comment[]
-  postLikes     PostLike[]
-  postImages    PostImage[]
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   PostCategory @default(NORMAL)
+  comments   Comment[]
+  postImages PostImage[]
+  postLikes  PostLike[]
+  group      Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([groupId, createdAt])
   @@map("posts")
 }
 
 model PostImage {
-  id         Int      @id @default(autoincrement())
-  postId     Int      @map("post_id")
-  postImgPath String   @map("post_img_path") @db.VarChar(255)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          Int       @id @default(autoincrement())
+  postId      Int       @map("post_id")
+  postImgPath String    @unique @map("post_img_path")   // ← url → path 필드 교체
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@unique([postImgPath])
   @@map("post_images")
 }
 
 model PostLike {
-  id     Int @id @default(autoincrement())
-  postId Int @map("post_id")
-  userId Int @map("user_id")
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     Int  @id @default(autoincrement())
+  postId Int  @map("post_id")
+  userId Int  @map("user_id")
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
-  @@index([postId])
   @@map("post_likes")
 }
 
@@ -133,13 +112,17 @@ model Comment {
   parentId  Int?      @map("parent_id")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @map("updated_at")
-
-  parent   Comment?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
-  children Comment[] @relation("replies")
-  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Comment[] @relation("replies")
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([parentId])
   @@map("comments")
+}
+
+enum PostCategory {
+  NORMAL
+  ANNOUNCEMENT
 }
