@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Post, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreatePostData,
-  UpdatePostData,
   PostWithUserAndCount,
+  UpdatePostData,
 } from './interfaces/post.interface';
-import { Post, Prisma } from '@prisma/client';
+
+type TxClient = Prisma.TransactionClient;
 
 @Injectable()
 export class PostsRepository {
@@ -70,8 +72,11 @@ export class PostsRepository {
     });
   }
 
-  async findPostById(id: number): Promise<PostWithUserAndCount | null> {
-    return await this.prisma.post.findUnique({
+  async findPostById(
+    id: number,
+    tx?: TxClient,
+  ): Promise<PostWithUserAndCount | null> {
+    return await (tx ?? this.prisma).post.findUnique({
       where: { id },
       include: {
         user: {

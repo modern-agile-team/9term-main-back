@@ -5,10 +5,11 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UserController } from './auth/user.controller';
 import { CommentsModule } from './comments/comments.module';
+import { GroupsModule } from './groups/groups.module';
+import { PostLikesModule } from './likes/post-likes.module';
+import { MemberModule } from './member/member.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { MemberModule } from './member/member.module';
-import { GroupsModule } from './groups/groups.module';
 import { S3Module } from './s3/s3.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { S3Module } from './s3/s3.module';
     CommentsModule,
     S3Module,
     GroupsModule,
+    PostLikesModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),

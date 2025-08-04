@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Group, Prisma, UserGroup, UserGroupRole } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateGroupInput,
   GroupUserInput,
   UpdateGroupInput,
 } from './types/group-inputs';
-import { Group, UserGroup, UserGroupRole } from '@prisma/client';
+
+type TxClient = Prisma.TransactionClient;
 
 @Injectable()
 export class GroupsRepository {
@@ -46,8 +48,10 @@ export class GroupsRepository {
     });
   }
 
-  findGroupById(groupId: number): Promise<Group | null> {
-    return this.prisma.group.findUnique({ where: { id: groupId } });
+  findGroupById(groupId: number, tx?: TxClient): Promise<Group | null> {
+    return (tx ?? this.prisma).group.findUnique({
+      where: { id: groupId },
+    });
   }
 
   getMemberCount(groupId: number): Promise<number> {
