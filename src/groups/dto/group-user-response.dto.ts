@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { UserGroupRole } from '@prisma/client';
 
 export class GroupUserResponseDto {
   @ApiProperty({ description: '사용자 ID', example: 1 })
@@ -12,9 +13,9 @@ export class GroupUserResponseDto {
 
   @ApiProperty({
     description: '그룹 내 역할',
-    enum: ['admin', 'member'],
-    example: 'member',
+    enum: [UserGroupRole],
+    example: UserGroupRole.MEMBER,
   })
   @Expose()
-  role: 'admin' | 'member';
+  role: UserGroupRole;
 }

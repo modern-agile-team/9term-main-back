@@ -8,7 +8,7 @@ export class UserProfileDto {
   name: string;
 
   @ApiProperty({ example: 'user123', description: '사용자 이름' })
-  userName: string;
+  username: string;
 }
 
 export class UserProfileResponseDto {

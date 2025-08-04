@@ -13,7 +13,7 @@ import { User } from 'src/auth/user.decorator';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { ToggleLikeResult } from 'src/likes/interfaces/postlikes.interface';
 import { PostLikesService } from 'src/likes/post-likes.service';
-import { ApiLikes } from './postlikes.swagger';
+import { ApiLikes } from './post-likes.swagger';
 
 @ApiTags('PostLikes')
 @ApiBearerAuth('access-token')

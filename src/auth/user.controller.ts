@@ -60,7 +60,7 @@ export class UserController {
       data: {
         userId: req.user.userId,
         name: req.user.name,
-        userName: req.user.userName,
+        username: req.user.username,
       },
     };
   }

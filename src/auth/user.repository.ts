@@ -5,10 +5,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByUserName(userName: string) {
-    return this.prisma.user.findUnique({ where: { userName } });
+  async findByUsername(username: string) {
+    return this.prisma.user.findUnique({ where: { username } });
   }
-  async createUser(data: { userName: string; name: string; password: string }) {
+
+  async createUser(data: { username: string; name: string; password: string }) {
     return this.prisma.user.create({ data });
   }
 }

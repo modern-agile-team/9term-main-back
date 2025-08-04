@@ -1,6 +1,6 @@
 export interface Member {
   userId: number;
-  userName: string;
+  username: string;
   name: string;
   role: string;
   joinedAt: Date;
