@@ -11,7 +11,7 @@ export interface GroupUserInput {
   userId: number;
   groupId: number;
   role: UserGroupRole;
-  groupImagePath?: string;
+  groupImagePath: string;
 }
 
 export interface UpdateGroupInput {

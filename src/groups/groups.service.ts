@@ -74,7 +74,8 @@ export class GroupsService {
 
     return Promise.all(
       groups.map(async (group) => {
-        const groupImagePath = group.groupImgPath ?? null;
+        const defaultImagePath = process.env.DEFAULT_GROUP_KEY;
+        const groupImagePath = group.groupImgPath ?? defaultImagePath;
         const groupImageUrl = groupImagePath
           ? this.s3Service.getFileUrl(groupImagePath)
           : null;
@@ -100,7 +101,8 @@ export class GroupsService {
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
-    const groupImagePath = group.groupImgPath ?? null;
+    const defaultImagePath = process.env.DEFAULT_GROUP_KEY;
+    const groupImagePath = group.groupImgPath ?? defaultImagePath;
     const groupImageUrl = groupImagePath
       ? this.s3Service.getFileUrl(groupImagePath)
       : null;
