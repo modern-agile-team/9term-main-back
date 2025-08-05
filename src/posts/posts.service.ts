@@ -65,12 +65,14 @@ export class PostsService {
 
     return posts.map((post) => {
       const imagePath = post.postImages?.[0]?.postImgPath;
-      const imageUrl = imagePath ? this.s3Service.getFileUrl(imagePath) : null;
+      const postImageUrl = imagePath
+        ? this.s3Service.getFileUrl(imagePath)
+        : null;
 
       return {
         ...post,
         commentsCount: post._count.comments,
-        imageUrl,
+        postImageUrl,
       };
     });
   }
@@ -82,12 +84,14 @@ export class PostsService {
     }
 
     const imagePath = post.postImages?.[0]?.postImgPath;
-    const imageUrl = imagePath ? this.s3Service.getFileUrl(imagePath) : null;
+    const postImageUrl = imagePath
+      ? this.s3Service.getFileUrl(imagePath)
+      : null;
 
     return {
       ...post,
       commentsCount: post._count.comments,
-      imageUrl,
+      postImageUrl,
     };
   }
 
