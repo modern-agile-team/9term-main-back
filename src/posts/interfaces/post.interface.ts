@@ -34,7 +34,7 @@ export interface PostWithUserAndCount extends PostWithUser {
 
 export interface PostWithCommentCount extends PostWithUser {
   commentsCount: number;
-  imageUrl?: string | null;
+  postImageUrl?: string | null;
 }
 
 export interface CreatePostData {

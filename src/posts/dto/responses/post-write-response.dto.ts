@@ -40,5 +40,5 @@ export class PostWriteResponseDto {
     description: '게시물 이미지 URL (S3 public URL)',
     nullable: true,
   })
-  imageUrl: string | null;
+  postImageUrl: string | null;
 }
