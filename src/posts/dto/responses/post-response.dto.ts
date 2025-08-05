@@ -51,5 +51,5 @@ export class PostResponseDto {
     nullable: true,
   })
   @Expose()
-  imageUrl: string | null;
+  postImageUrl: string | null;
 }
