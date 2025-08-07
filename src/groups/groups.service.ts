@@ -19,6 +19,9 @@ import { S3ObjectType } from 'src/s3/s3.types';
 
 @Injectable()
 export class GroupsService {
+  private static readonly DEFAULT_GROUP_IMAGE_URL =
+    process.env.DEFAULT_GROUP_IMAGE_URL!;
+
   constructor(
     private readonly groupsRepository: GroupsRepository,
     private readonly membersService: MembersService,
@@ -72,10 +75,9 @@ export class GroupsService {
 
     return Promise.all(
       groups.map(async (group) => {
-        const groupImagePath = group.groupImgPath ?? null;
-        const groupImageUrl = groupImagePath
-          ? this.s3Service.getFileUrl(groupImagePath)
-          : null;
+        const groupImageUrl = this.s3Service.getFileUrl(
+          group.groupImgPath ?? GroupsService.DEFAULT_GROUP_IMAGE_URL,
+        );
 
         return plainToInstance(
           GroupWithMemberCountDto,
@@ -98,10 +100,9 @@ export class GroupsService {
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
-    const groupImagePath = group.groupImgPath ?? null;
-    const groupImageUrl = groupImagePath
-      ? this.s3Service.getFileUrl(groupImagePath)
-      : null;
+    const groupImageUrl = this.s3Service.getFileUrl(
+      group.groupImgPath ?? GroupsService.DEFAULT_GROUP_IMAGE_URL,
+    );
 
     if (!userId) {
       return plainToInstance(
