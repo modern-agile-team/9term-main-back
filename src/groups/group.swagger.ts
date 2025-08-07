@@ -184,7 +184,7 @@ export const ApiGroups = {
           message: '그룹 ID 2의 정보를 성공적으로 가져왔습니다.',
           data: {
             isJoined: true,
-            role: 'admin',
+            role: 'MANAGER',
           },
         },
       ),
@@ -204,7 +204,7 @@ export const ApiGroups = {
           data: {
             userId: 1,
             groupId: 10,
-            role: 'member',
+            role: 'MEMBER',
           },
         },
       ),

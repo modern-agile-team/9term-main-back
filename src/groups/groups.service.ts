@@ -5,14 +5,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
-import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsRepository } from './groups.repository';
 import { plainToInstance } from 'class-transformer';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
-import { GroupUserResponseDto } from './dto/group-user-response.dto';
 import { CreateGroupInput, UpdateGroupInput } from './types/group-inputs';
 import { MembersService } from '../member/member.service';
 import { UserGroupRole } from '@prisma/client';
@@ -134,13 +132,6 @@ export class GroupsService {
         excludeExtraneousValues: true,
       },
     );
-  }
-
-  async joinGroup(joinGroupDto: JoinGroupDto): Promise<GroupUserResponseDto> {
-    const createdGroupUser = await this.membersService.joinGroup(joinGroupDto);
-    return plainToInstance(GroupUserResponseDto, createdGroupUser, {
-      excludeExtraneousValues: true,
-    });
   }
 
   async updateGroup(
