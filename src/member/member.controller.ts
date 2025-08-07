@@ -4,7 +4,6 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
-  ForbiddenException,
   Post,
   Body,
   NotFoundException,
@@ -24,7 +23,7 @@ import {
 } from './dto/update-member-status.dto';
 import { MemberSwagger, ApiMembers } from './member.swagger';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { UserGroupRole, MembershipStatus } from '@prisma/client';
+import { MembershipStatus } from '@prisma/client';
 import { User } from '../auth/user.decorator';
 
 @Controller('groups/:groupId/members')
@@ -38,31 +37,18 @@ export class MembersController {
   @ApiMembers.getList()
   async getMemberList(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @User() user: AuthenticatedUser,
     @Query('status') status?: string,
   ): Promise<MemberResponseDto[]> {
     if (!status) {
       return this.membersService.getAllMembersWithStatus(groupId);
     }
-
-    const managerOnlyStatuses: MembershipStatus[] = [
-      MembershipStatus.PENDING,
-      MembershipStatus.REJECTED,
-      MembershipStatus.LEFT,
-    ];
-    if (status && managerOnlyStatuses.includes(status as MembershipStatus)) {
-      const member = await this.membersService.getGroupMember(
-        groupId,
-        user.userId,
-      );
-      if (!member || member.role !== UserGroupRole.MANAGER) {
-        throw new ForbiddenException(
-          '매니저만 해당 상태의 멤버를 조회할 수 있습니다.',
-        );
-      }
+    const statusEnum =
+      MembershipStatus[status as keyof typeof MembershipStatus];
+    if (!statusEnum) {
+      throw new BadRequestException(`유효하지 않은 status 값입니다: ${status}`);
     }
 
-    switch (status) {
+    switch (statusEnum) {
       case MembershipStatus.PENDING:
         return this.membersService.getPendingMembers(groupId);
       case MembershipStatus.APPROVED:
@@ -94,8 +80,8 @@ export class MembersController {
   }
 
   @UseGuards(CustomJwtAuthGuard)
-  @ApiBearerAuth('access-token')
   @Post()
+  @ApiBearerAuth('access-token')
   @ApiMembers.join()
   async joinGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -109,7 +95,7 @@ export class MembersController {
     });
   }
 
-  @UseGuards(CustomJwtAuthGuard)
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @Post(':id/status')
   @ApiBearerAuth('access-token')
   @ApiMembers.updateStatus()
@@ -117,65 +103,37 @@ export class MembersController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) userId: number,
     @Body() updateStatusDto: UpdateMemberStatusDto,
-    @User() requester: AuthenticatedUser,
   ): Promise<{ message: string; member: MemberResponseDto }> {
-    const requesterUserId = requester.userId;
     const { action } = updateStatusDto;
+    return this.executeAction(groupId, userId, action);
+  }
 
-    if (action !== MemberAction.LEFT && userId === requesterUserId) {
-      throw new ForbiddenException('자신의 상태를 변경할 수 없습니다.');
-    }
-
-    if (action === MemberAction.LEFT && userId !== requesterUserId) {
-      throw new ForbiddenException('본인만 탈퇴할 수 있습니다.');
-    }
-
-    if (action === MemberAction.APPROVE || action === MemberAction.REJECT) {
-      const requesterMember = await this.membersService.getGroupMember(
-        groupId,
-        requesterUserId,
-      );
-      if (!requesterMember || requesterMember.role !== UserGroupRole.MANAGER) {
-        throw new ForbiddenException(
-          '매니저만 가입 신청을 처리할 수 있습니다.',
-        );
-      }
-    }
-
-    let updatedMember: MemberResponseDto;
-    let message: string;
-
+  private async executeAction(
+    groupId: number,
+    userId: number,
+    action: MemberAction,
+  ): Promise<{ message: string; member: MemberResponseDto }> {
     switch (action) {
       case MemberAction.APPROVE: {
-        updatedMember = await this.membersService.approveMembership(
+        const member = await this.membersService.approveMembership(
           groupId,
           userId,
         );
-        message = '가입 신청이 승인되었습니다.';
-        break;
+        return { message: '가입 신청이 승인되었습니다.', member };
       }
       case MemberAction.REJECT: {
-        updatedMember = await this.membersService.rejectMembership(
+        const member = await this.membersService.rejectMembership(
           groupId,
           userId,
         );
-        message = '가입 신청이 거절되었습니다.';
-        break;
+        return { message: '가입 신청이 거절되었습니다.', member };
       }
       case MemberAction.LEFT: {
-        const leftResult = await this.membersService.leaveGroup(
-          groupId,
-          userId,
-        );
-        updatedMember = leftResult.member;
-        message = leftResult.message;
-        break;
+        return this.membersService.leaveGroup(groupId, userId);
       }
       default: {
-        throw new ForbiddenException('올바르지 않은 액션입니다.');
+        throw new BadRequestException('올바르지 않은 액션입니다.');
       }
     }
-
-    return { message, member: updatedMember };
   }
 }
