@@ -9,7 +9,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { MemberResponseDto } from './dto/member-response.dto';
-import { JoinGroupDto } from '../groups/dto/join-group.dto';
+import { JoinMemberRequestDto } from './dto/join-member-request.dto';
+import {
+  UpdateMemberStatusDto,
+  MemberAction,
+} from './dto/update-member-status.dto';
 
 const unauthorizedResponse = () =>
   ApiResponse({
@@ -162,33 +166,65 @@ export const ApiMembers = {
 
   join: () =>
     applyDecorators(
-      ApiOperation({ summary: '그룹 가입' }),
+      ApiOperation({
+        summary: '그룹 가입 신청',
+        description:
+          '그룹에 가입을 신청합니다. 성공 시 생성된 멤버 정보를 반환합니다.',
+      }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
-      ApiBody({ type: JoinGroupDto }),
-      ApiResponseWithData(MemberResponseDto, 201, '그룹 가입 성공'),
-      conflictResponse('이미 이 그룹에 가입되어 있습니다.'),
+      ApiBody({ type: JoinMemberRequestDto }),
+      ApiResponseWithData(Object, 201, '그룹 가입 신청 성공', {
+        message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
+        member: {
+          /* MemberResponseDto 구조 */
+        },
+      }),
+      conflictResponse('이미 신청 중이거나 가입된 그룹입니다.'),
       badRequestResponse(),
       unauthorizedResponse(),
     ),
 
-  remove: () =>
+  updateStatus: () =>
     applyDecorators(
-      ApiOperation({ summary: '그룹 멤버 삭제(매니저/어드민만 가능)' }),
+      ApiOperation({
+        summary: '멤버 상태 변경 통합 API',
+        description:
+          '멤버의 상태를 변경합니다. APPROVE/REJECT는 매니저만, LEFT는 본인만 가능합니다.',
+      }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
-      ApiParam({ name: 'id', type: Number, description: '멤버 PK(ID)' }),
-      ApiResponse({
-        status: 200,
-        description: '삭제 완료',
-        schema: {
-          example: { message: '삭제가 완료되었습니다.' },
+      ApiParam({
+        name: 'id',
+        type: Number,
+        description: '대상 멤버의 사용자 ID',
+      }),
+      ApiBody({
+        type: UpdateMemberStatusDto,
+        examples: {
+          approve: {
+            summary: '가입 승인 (매니저 전용)',
+            value: { action: MemberAction.APPROVE },
+          },
+          reject: {
+            summary: '가입 거절 (매니저 전용)',
+            value: { action: MemberAction.REJECT },
+          },
+          leave: {
+            summary: '그룹 탈퇴 (본인만)',
+            value: { action: MemberAction.LEFT },
+          },
         },
       }),
-      notFoundResponse('삭제할 멤버가 존재하지 않습니다.'),
+      ApiResponseWithData(Object, 200, '상태 변경 성공', {
+        message: '작업이 성공적으로 완료되었습니다.',
+        member: {
+          /* MemberResponseDto 구조 */
+        },
+      }),
       unauthorizedResponse(),
-      forbiddenResponse('이 그룹의 매니저 또는 어드민만 접근할 수 있습니다.'),
+      forbiddenResponse('권한이 없습니다.'),
+      conflictResponse('처리할 수 없는 요청입니다.'),
     ),
 };
-
 export function MemberSwagger() {
   return applyDecorators(ApiTags('Member'));
 }

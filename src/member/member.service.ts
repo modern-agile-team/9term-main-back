@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { MemberRepository } from './member.repository';
-import { JoinMemberRequestDto } from './dto/member-request.dto';
+import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
 import {
   MembershipStatus,
@@ -44,13 +44,8 @@ export class MembersService {
 
   private transformToResponseDto(
     members: (PrismaUserGroup & { user: User })[],
-    excludeManager: boolean = false,
   ): MemberResponseDto[] {
-    const filteredMembers = excludeManager
-      ? members.filter((member) => member.role !== UserGroupRole.MANAGER)
-      : members;
-
-    return filteredMembers.map((member) => {
+    return members.map((member) => {
       if (!member.user) {
         throw new InternalServerErrorException('유저 정보가 없습니다.');
       }
@@ -81,29 +76,10 @@ export class MembersService {
     };
   }
 
-  async removeMember(
-    groupId: number,
-    targetUserId: number,
-  ): Promise<{ message: string }> {
-    const targetMember = await this.memberRepository.findGroupMember(
-      groupId,
-      targetUserId,
-    );
-    if (!targetMember) {
-      throw new NotFoundException('멤버가 존재하지 않습니다.');
-    }
-    await this.memberRepository.deleteManyByGroupAndUser(
-      targetMember.groupId,
-      targetMember.userId,
-    );
-
-    return { message: '멤버가 강퇴되었습니다.' };
-  }
-
   async leaveGroup(
     groupId: number,
     userId: number,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; member: MemberResponseDto }> {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
 
     if (!member) {
@@ -118,19 +94,25 @@ export class MembersService {
       throw new ConflictException('그룹 매니저는 탈퇴할 수 없습니다.');
     }
 
-    await this.memberRepository.updateMembershipStatusWithLeftAt(
+    const updatedMember = await this.memberRepository.updateMembershipStatus(
       groupId,
       userId,
-      MembershipStatus.LEFT,
+      {
+        status: MembershipStatus.LEFT,
+        leftAt: new Date(),
+      },
     );
 
-    return { message: '그룹을 탈퇴했습니다.' };
+    return {
+      message: '그룹을 탈퇴했습니다.',
+      member: this.transformToResponseDto([updatedMember])[0],
+    };
   }
 
   async joinGroup(
     dto: JoinMemberRequestDto & { userId: number },
-  ): Promise<{ message: string }> {
-    const { groupId, userId } = dto;
+  ): Promise<{ message: string; member: MemberResponseDto }> {
+    const { groupId, userId, status = MembershipStatus.PENDING } = dto;
 
     const existingMembership = await this.memberRepository.findGroupMember(
       groupId,
@@ -145,19 +127,23 @@ export class MembersService {
       throw new ConflictException('이미 신청 중이거나 가입된 그룹입니다.');
     }
 
-    await this.memberRepository.upsertMember({
+    const newMember = await this.memberRepository.upsertMember({
       groupId,
       userId,
       role: UserGroupRole.MEMBER,
-      status: MembershipStatus.PENDING,
+      status,
     });
 
     return {
       message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
+      member: this.transformToResponseDto([newMember])[0],
     };
   }
 
-  async approveMembership(groupId: number, userId: number): Promise<void> {
+  async approveMembership(
+    groupId: number,
+    userId: number,
+  ): Promise<MemberResponseDto> {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
 
     if (!member || member.status !== MembershipStatus.PENDING) {
@@ -166,12 +152,21 @@ export class MembersService {
       );
     }
 
-    await this.memberRepository.updateMembershipStatus(groupId, userId, {
-      status: MembershipStatus.APPROVED,
-    });
+    const updatedMember = await this.memberRepository.updateMembershipStatus(
+      groupId,
+      userId,
+      {
+        status: MembershipStatus.APPROVED,
+      },
+    );
+
+    return this.transformToResponseDto([updatedMember])[0];
   }
 
-  async rejectMembership(groupId: number, userId: number): Promise<void> {
+  async rejectMembership(
+    groupId: number,
+    userId: number,
+  ): Promise<MemberResponseDto> {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
 
     if (!member || member.status !== MembershipStatus.PENDING) {
@@ -180,8 +175,38 @@ export class MembersService {
       );
     }
 
-    await this.memberRepository.updateMembershipStatus(groupId, userId, {
-      status: MembershipStatus.REJECTED,
-    });
+    const updatedMember = await this.memberRepository.updateMembershipStatus(
+      groupId,
+      userId,
+      {
+        status: MembershipStatus.REJECTED,
+      },
+    );
+
+    return this.transformToResponseDto([updatedMember])[0];
+  }
+
+  async getApprovedMembers(groupId: number): Promise<MemberResponseDto[]> {
+    const approvedMembers = await this.memberRepository.findMembersByGroup(
+      groupId,
+      { status: MembershipStatus.APPROVED },
+    );
+    return this.transformToResponseDto(approvedMembers);
+  }
+
+  async getRejectedMembers(groupId: number): Promise<MemberResponseDto[]> {
+    const rejectedMembers = await this.memberRepository.findMembersByGroup(
+      groupId,
+      { status: MembershipStatus.REJECTED },
+    );
+    return this.transformToResponseDto(rejectedMembers);
+  }
+
+  async getLeftMembers(groupId: number): Promise<MemberResponseDto[]> {
+    const leftMembers = await this.memberRepository.findMembersByGroup(
+      groupId,
+      { status: MembershipStatus.LEFT },
+    );
+    return this.transformToResponseDto(leftMembers);
   }
 }
