@@ -77,6 +77,24 @@ export class MembersController {
     }
   }
 
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Get('pending')
+  @ApiBearerAuth('access-token')
+  async getPendingMembers(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ): Promise<MemberResponseDto[]> {
+    return this.membersService.getPendingMembers(groupId);
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Get('all-status')
+  @ApiBearerAuth('access-token')
+  async getAllMembersWithStatus(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ): Promise<MemberResponseDto[]> {
+    return this.membersService.getAllMembersWithStatus(groupId);
+  }
+
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @Get(':id')
   @ApiBearerAuth('access-token')
@@ -176,5 +194,16 @@ export class MembersController {
     }
 
     return { message, member: updatedMember };
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
+  @Post('leave')
+  @ApiBearerAuth('access-token')
+  async leaveGroup(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedUser;
+    return this.membersService.leaveGroup(groupId, user.userId);
   }
 }
