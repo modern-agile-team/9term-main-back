@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { MembersService } from './member.service';
 import { GroupMemberGuard } from './guards/group-member.guard';
+import { GroupManagerGuard } from './guards/group-manager.guard';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { MemberResponseDto } from './dto/member-response.dto';
@@ -75,24 +76,6 @@ export class MembersController {
           `유효하지 않은 status 값입니다: ${status}`,
         );
     }
-  }
-
-  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
-  @Get('pending')
-  @ApiBearerAuth('access-token')
-  async getPendingMembers(
-    @Param('groupId', ParseIntPipe) groupId: number,
-  ): Promise<MemberResponseDto[]> {
-    return this.membersService.getPendingMembers(groupId);
-  }
-
-  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
-  @Get('all-status')
-  @ApiBearerAuth('access-token')
-  async getAllMembersWithStatus(
-    @Param('groupId', ParseIntPipe) groupId: number,
-  ): Promise<MemberResponseDto[]> {
-    return this.membersService.getAllMembersWithStatus(groupId);
   }
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
@@ -194,16 +177,5 @@ export class MembersController {
     }
 
     return { message, member: updatedMember };
-  }
-
-  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
-  @Post('leave')
-  @ApiBearerAuth('access-token')
-  async leaveGroup(
-    @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: Request,
-  ) {
-    const user = req.user as AuthenticatedUser;
-    return this.membersService.leaveGroup(groupId, user.userId);
   }
 }
