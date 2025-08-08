@@ -1,12 +1,13 @@
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
-import { Response, Request } from 'express';
-import { AuthService } from './auth.service';
-import { SignupRequestDto } from './dto/signup-request.dto';
-import { LoginRequestDto } from './dto/login-request.dto';
-import { JwtRefreshGuard } from './guards/refresh.guard';
 import { ConfigService } from '@nestjs/config';
+import { Request, Response } from 'express';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { AuthService } from './auth.service';
 import { ApiAuth, AuthSwagger } from './auth.swagger';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { LoginRequestDto } from './dto/requests/login-request.dto';
+import { SignupRequestDto } from './dto/requests/signup-request.dto';
+import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
+import { JwtRefreshGuard } from './guards/refresh.guard';
 
 @Controller('auth')
 @AuthSwagger()
@@ -34,7 +35,7 @@ export class AuthController {
   @ApiAuth.signup()
   async signup(
     @Body() signupRequestDto: SignupRequestDto,
-  ): Promise<AuthResponseDto> {
+  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
     await this.authService.signup(signupRequestDto);
     return {
       status: 'success',
@@ -48,7 +49,7 @@ export class AuthController {
   async login(
     @Body() loginRequestDto: LoginRequestDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthResponseDto> {
+  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
     const { accessToken, refreshToken } =
       await this.authService.login(loginRequestDto);
 
@@ -69,7 +70,7 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthResponseDto> {
+  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
     const refreshToken = req.cookies['refresh_token'] as string;
     if (!refreshToken) {
       res.status(400);
