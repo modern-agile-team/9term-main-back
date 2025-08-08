@@ -3,7 +3,7 @@ import { Post, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreatePostData,
-  PostWithUserAndCount,
+  PostWithUserAndCountRaw,
   UpdatePostData,
 } from './interfaces/post.interface';
 
@@ -51,7 +51,7 @@ export class PostsRepository {
 
   async findPostsWithCommentsCount(
     groupId: number,
-  ): Promise<PostWithUserAndCount[]> {
+  ): Promise<PostWithUserAndCountRaw[]> {
     return await this.prisma.post.findMany({
       where: { groupId },
       orderBy: { createdAt: 'desc' },
@@ -65,6 +65,7 @@ export class PostsRepository {
         _count: {
           select: {
             comments: true,
+            postLikes: true,
           },
         },
         postImages: true,
@@ -75,7 +76,7 @@ export class PostsRepository {
   async findPostById(
     id: number,
     tx?: TxClient,
-  ): Promise<PostWithUserAndCount | null> {
+  ): Promise<PostWithUserAndCountRaw | null> {
     return await (tx ?? this.prisma).post.findUnique({
       where: { id },
       include: {
@@ -88,6 +89,7 @@ export class PostsRepository {
         _count: {
           select: {
             comments: true,
+            postLikes: true,
           },
         },
         postImages: true,

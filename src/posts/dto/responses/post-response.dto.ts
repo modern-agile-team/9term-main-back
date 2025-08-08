@@ -44,6 +44,14 @@ export class PostResponseDto {
   @Expose()
   commentsCount: number;
 
+  @ApiProperty({ example: 9, required: false, description: '좋아요 수' })
+  @Expose()
+  likesCount: number;
+
+  @ApiProperty({ example: 9, required: false, description: '좋아요 수' })
+  @Expose()
+  isLiked: boolean;
+
   @ApiProperty({
     example:
       'https://your-bucket.s3.ap-northeast-2.amazonaws.com/posts/uuid.jpeg',
