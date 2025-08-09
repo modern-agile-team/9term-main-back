@@ -1,8 +1,17 @@
-import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { LoginRequestDto } from './dto/login-request.dto';
-import { SignupRequestDto } from './dto/signup-request.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { applyDecorators, Type } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { LoginRequestDto } from './dto/requests/login-request.dto';
+import { SignupRequestDto } from './dto/requests/signup-request.dto';
+import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
+import { LoginResponseDto } from './dto/responses/login-response.dto';
 
 const unauthorizedExamples = {
   TokenExpired: {
@@ -19,25 +28,32 @@ const unauthorizedExamples = {
 
 const conflictExamples = {
   DuplicateUser: {
-    message: '이미 사용 중인 사용자 ID입니다.',
+    message: '이미 사용 중인 아이디입니다.',
     error: 'Conflict',
     statusCode: 409,
   },
 } as const;
 
 const badRequestExamples = {
+  UsernamePattern: {
+    message: [
+      'username은 숫자만으로 구성될 수 없으며, 영문자와 숫자만 사용할 수 있습니다.',
+    ],
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+  NamePattern: {
+    message: ['이름은 2자 이상 30자 이하로 입력해주세요.'],
+    error: 'Bad Request',
+    statusCode: 400,
+  },
   PasswordPattern: {
-    message: ['비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.'],
+    message: ['비밀번호는 8자 이상이어야 합니다.'],
     error: 'Bad Request',
     statusCode: 400,
   },
-  EmailPattern: {
-    message: ['이메일 형식이 올바르지 않습니다.'],
-    error: 'Bad Request',
-    statusCode: 400,
-  },
-  Required: {
-    message: ['필수 값이 누락되었거나 형식이 올바르지 않습니다.'],
+  FieldRequired: {
+    message: ['필수 값이 누락되었거나 빈 문자열입니다.'],
     error: 'Bad Request',
     statusCode: 400,
   },
@@ -90,15 +106,15 @@ const conflictResponses = () =>
     },
   });
 
-const badRequestResponses = (examples: Record<string, object>) =>
+const badRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
   ApiResponse({
     status: 400,
     description: '잘못된 요청 데이터',
     content: {
       'application/json': {
-        examples: Object.entries(examples).reduce(
-          (acc, [name, exValue]) => {
-            acc[name] = { value: exValue };
+        examples: keys.reduce(
+          (acc, key) => {
+            acc[key] = { value: badRequestExamples[key] };
             return acc;
           },
           {} as Record<string, { value: object }>,
@@ -106,6 +122,32 @@ const badRequestResponses = (examples: Record<string, object>) =>
       },
     },
   });
+
+const ApiResponseWithData = <T extends Type<any>>(
+  model: T,
+  status = 200,
+  description = '요청이 성공적으로 처리되었습니다.',
+) => {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto, model),
+    ApiResponse({
+      status,
+      description,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', example: 'success' },
+              message: { type: 'string', example: description },
+              data: { $ref: getSchemaPath(model) },
+            },
+          },
+        },
+      },
+    }),
+  );
+};
 
 export function AuthSwagger() {
   return applyDecorators(ApiTags('Auth'));
@@ -119,46 +161,37 @@ export const ApiAuth = {
       ApiResponse({
         status: 201,
         description: '회원가입 성공',
-        type: AuthResponseDto,
+        schema: {
+          properties: {
+            status: { type: 'string', example: 'success' },
+            message: { type: 'string', example: '회원가입에 성공했습니다.' },
+            data: { type: 'string', example: null, nullable: true },
+          },
+        },
       }),
       conflictResponses(),
-      badRequestResponses({
-        '비밀번호 패턴 불일치': badRequestExamples.PasswordPattern,
-        '이메일 패턴 불일치': badRequestExamples.EmailPattern,
-        '필수값 누락/형식 오류': badRequestExamples.Required,
-      }),
-      unauthorizedResponses(),
+      badRequestResponses([
+        'UsernamePattern',
+        'NamePattern',
+        'PasswordPattern',
+        'FieldRequired',
+      ]),
     ),
 
   login: () =>
     applyDecorators(
       ApiOperation({ summary: '로그인' }),
       ApiBody({ description: '로그인 요청 DTO', type: LoginRequestDto }),
-      ApiResponse({
-        status: 201,
-        description: '로그인 성공',
-        type: AuthResponseDto,
-      }),
-      badRequestResponses({
-        '로그인 실패': badRequestExamples.LoginFail,
-        '필수값 누락/형식 오류': badRequestExamples.Required,
-        '존재하지 않는 사용자': badRequestExamples.UserNotFound,
-      }),
+      ApiResponseWithData(LoginResponseDto, 201, '로그인에 성공했습니다.'),
+      badRequestResponses(['LoginFail', 'FieldRequired', 'UserNotFound']),
       unauthorizedResponses(),
     ),
 
   refresh: () =>
     applyDecorators(
       ApiOperation({ summary: '토큰 리프레시' }),
-      ApiResponse({
-        status: 201,
-        description: '토큰 재발급 성공',
-        type: AuthResponseDto,
-      }),
-      badRequestResponses({
-        'Refresh Token 없음': badRequestExamples.RefreshToken,
-        '유효하지 않은 Refresh Token': badRequestExamples.InvalidRefreshToken,
-      }),
+      ApiResponseWithData(AuthTokenDataDto, 201, '토큰 재발급 성공'),
+      badRequestResponses(['RefreshToken', 'InvalidRefreshToken']),
       unauthorizedResponses(),
     ),
 };
