@@ -9,17 +9,19 @@ import {
   CreatePostData,
   UpdatePostData,
   Post,
-  PostWithCommentCount,
+  PostSummary,
 } from './interfaces/post.interface';
 import { PostsRepository } from './posts.repository';
 import { S3ObjectType } from 'src/s3/s3.types';
 import { S3Service } from 'src/s3/s3.service';
+import { PostLikesRepository } from 'src/likes/post-likes.repository';
 
 @Injectable()
 export class PostsService {
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly s3Service: S3Service,
+    private readonly postLikesRepository: PostLikesRepository,
   ) {}
 
   async createPost(
@@ -59,10 +61,15 @@ export class PostsService {
 
   async findAllPostsByGroupId(
     groupId: number,
-  ): Promise<PostWithCommentCount[]> {
+    userId: number,
+  ): Promise<PostSummary[]> {
     const posts =
       await this.postsRepository.findPostsWithCommentsCount(groupId);
+    const postIds = posts.map((post) => post.id);
 
+    const likedPostIds = new Set(
+      await this.postLikesRepository.findLikedPostIdsByUser(userId, postIds),
+    );
     return posts.map((post) => {
       const imagePath = post.postImages?.[0]?.postImgPath;
       const postImageUrl = imagePath
@@ -70,30 +77,44 @@ export class PostsService {
         : null;
 
       return {
-        ...post,
-        commentsCount: post._count.comments,
+        id: post.id,
+        groupId: post.groupId,
+        userId: post.userId,
+        user: { id: post.user.id, name: post.user.name },
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        category: post.category,
+
+        title: post.title,
+        content: post.content,
         postImageUrl,
+
+        commentsCount: post._count.comments,
+        likesCount: post._count.postLikes,
+
+        isLiked: likedPostIds.has(post.id),
       };
     });
   }
 
-  async getPostById(id: number): Promise<PostWithCommentCount> {
-    const post = await this.postsRepository.findPostById(id);
-    if (!post) {
-      throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
-    }
+  // async getPostById(id: number): Promise<PostSummary> {
+  //   const post = await this.postsRepository.findPostById(id);
+  //   if (!post) {
+  //     throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
+  //   }
 
-    const imagePath = post.postImages?.[0]?.postImgPath;
-    const postImageUrl = imagePath
-      ? this.s3Service.getFileUrl(imagePath)
-      : null;
+  //   const imagePath = post.postImages?.[0]?.postImgPath;
+  //   const postImageUrl = imagePath
+  //     ? this.s3Service.getFileUrl(imagePath)
+  //     : null;
 
-    return {
-      ...post,
-      commentsCount: post._count.comments,
-      postImageUrl,
-    };
-  }
+  //   return {
+  //     ...post,
+  //     commentsCount: post._count.comments,
+  //     likesCount: post._count.postLikes,
+  //     postImageUrl,
+  //   };
+  // }
 
   async updatePost(
     updatePostDto: UpdatePostRequestDto,

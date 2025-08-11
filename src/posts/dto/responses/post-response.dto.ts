@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { UserInfoDto } from '../user-info.dto';
+import { PostCategory } from '@prisma/client';
 
 export class PostResponseDto {
   @ApiProperty({ example: 1, description: '게시물 ID' })
@@ -11,13 +12,14 @@ export class PostResponseDto {
   @Expose()
   groupId: number;
 
-  @ApiProperty({ example: '제목', description: '게시물 제목' })
+  @ApiProperty({
+    type: () => UserInfoDto,
+    required: false,
+    description: '작성자 정보',
+  })
   @Expose()
-  title: string;
-
-  @ApiProperty({ example: '본문 내용', description: '게시물 내용' })
-  @Expose()
-  content: string;
+  @Type(() => UserInfoDto)
+  user: UserInfoDto;
 
   @ApiProperty({ example: '2025-07-08T10:00:00Z', description: '작성일' })
   @Expose()
@@ -31,18 +33,17 @@ export class PostResponseDto {
   @Expose()
   updatedAt: Date | null;
 
-  @ApiProperty({
-    type: () => UserInfoDto,
-    required: false,
-    description: '작성자 정보',
-  })
+  @ApiProperty({ example: PostCategory.NORMAL, description: '분류' })
   @Expose()
-  @Type(() => UserInfoDto)
-  user: UserInfoDto;
+  category: PostCategory;
 
-  @ApiProperty({ example: 3, required: false, description: '댓글 수' })
+  @ApiProperty({ example: '제목', description: '게시물 제목' })
   @Expose()
-  commentsCount: number;
+  title: string;
+
+  @ApiProperty({ example: '본문 내용', description: '게시물 내용' })
+  @Expose()
+  content: string;
 
   @ApiProperty({
     example:
@@ -52,4 +53,16 @@ export class PostResponseDto {
   })
   @Expose()
   postImageUrl: string | null;
+
+  @ApiProperty({ example: 3, required: true, description: '댓글 수' })
+  @Expose()
+  commentsCount: number;
+
+  @ApiProperty({ example: 9, required: true, description: '좋아요 수' })
+  @Expose()
+  likesCount: number;
+
+  @ApiProperty({ example: false, required: true, description: '좋아요 여부' })
+  @Expose()
+  isLiked: boolean;
 }
