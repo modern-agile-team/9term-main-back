@@ -40,15 +40,15 @@ export class PostResponseDto {
   @Type(() => UserInfoDto)
   user: UserInfoDto;
 
-  @ApiProperty({ example: 3, required: false, description: '댓글 수' })
+  @ApiProperty({ example: 3, required: true, description: '댓글 수' })
   @Expose()
   commentsCount: number;
 
-  @ApiProperty({ example: 9, required: false, description: '좋아요 수' })
+  @ApiProperty({ example: 9, required: true, description: '좋아요 수' })
   @Expose()
   likesCount: number;
 
-  @ApiProperty({ example: 9, required: false, description: '좋아요 수' })
+  @ApiProperty({ example: 9, required: true, description: '좋아요 수' })
   @Expose()
   isLiked: boolean;
 
