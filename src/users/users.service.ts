@@ -6,18 +6,18 @@ import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersrepository: UsersRepository) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async createUser(userData: Prisma.UserCreateInput): Promise<User> {
-    return this.usersrepository.createUser(userData);
+    return this.usersRepository.createUser(userData);
   }
 
   async findUserByUsername(username: string) {
-    return this.usersrepository.findByUsername(username);
+    return this.usersRepository.findByUsername(username);
   }
 
   async findMyProfile(userId: number): Promise<UserProfileDto> {
-    const user: User | null = await this.usersrepository.findUserById(userId);
+    const user: User | null = await this.usersRepository.findUserById(userId);
 
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
