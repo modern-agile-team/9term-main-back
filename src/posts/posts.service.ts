@@ -77,10 +77,21 @@ export class PostsService {
         : null;
 
       return {
-        ...post,
+        id: post.id,
+        groupId: post.groupId,
+        userId: post.userId,
+        user: { id: post.user.id, name: post.user.name },
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        category: post.category,
+
+        title: post.title,
+        content: post.content,
+        postImageUrl,
+
         commentsCount: post._count.comments,
         likesCount: post._count.postLikes,
-        postImageUrl,
+
         isLiked: likedPostIds.has(post.id),
       };
     });
