@@ -13,4 +13,11 @@ export class UserProfileDto {
   @Expose()
   @ApiProperty({ example: 'user123', description: '사용자 아이디' })
   username: string;
+
+  @Expose()
+  @ApiProperty({
+    example: 'https://example.com/profile/default_1.png',
+    description: '프로필 이미지 URL',
+  })
+  profileImgPath: string;
 }
