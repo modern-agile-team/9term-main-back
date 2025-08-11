@@ -2,16 +2,16 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { LoginRequestDto } from './dto/login-request.dto';
-import { SignupRequestDto } from './dto/signup-request.dto';
+import { UsersService } from 'src/users/users.service';
+import { LoginRequestDto } from './dto/requests/login-request.dto';
+import { SignupRequestDto } from './dto/requests/signup-request.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { PasswordEncoderService } from './password-encoder.service';
-import { UserRepository } from './user.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userRepository: UserRepository,
+    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly passwordEncoderService: PasswordEncoderService,
@@ -19,7 +19,7 @@ export class AuthService {
 
   // 회원가입
   async signup(signupRequestDto: SignupRequestDto): Promise<void> {
-    const existingUser = await this.userRepository.findByUsername(
+    const existingUser = await this.usersService.findUserByUsername(
       signupRequestDto.username,
     );
     if (existingUser) {
@@ -28,7 +28,7 @@ export class AuthService {
     const hashedPassword = await this.passwordEncoderService.hash(
       signupRequestDto.password,
     );
-    await this.userRepository.createUser({
+    await this.usersService.createUser({
       username: signupRequestDto.username,
       name: signupRequestDto.name,
       password: hashedPassword,
@@ -40,7 +40,7 @@ export class AuthService {
     accessToken: string;
     refreshToken: string;
   }> {
-    const user = await this.userRepository.findByUsername(
+    const user = await this.usersService.findUserByUsername(
       loginRequestDto.username,
     );
     if (!user) {
@@ -80,7 +80,7 @@ export class AuthService {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      const user = await this.userRepository.findByUsername(payload.username);
+      const user = await this.usersService.findUserByUsername(payload.username);
       if (!user) {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }

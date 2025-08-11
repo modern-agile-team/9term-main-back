@@ -15,5 +15,5 @@ export class ApiResponseDto<T = any> {
     example: {},
     nullable: true,
   })
-  data: T;
+  data: T | null;
 }
