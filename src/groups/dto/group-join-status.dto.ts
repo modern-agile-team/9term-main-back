@@ -13,7 +13,7 @@ export class GroupJoinStatusDto {
   @ApiProperty({
     description: '그룹 내 역할 (가입하지 않았을 경우 null)',
     enum: [...Object.values(UserGroupRole), null],
-    example: 'MEMBER',
+    example: UserGroupRole.MEMBER,
   })
   @Expose()
   role: UserGroupRole | null;
