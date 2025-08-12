@@ -1,6 +1,6 @@
 import {
   S3Client,
-  S3ClientConfig,
+  type S3ClientConfig,
   PutObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -18,9 +18,9 @@ import { S3ObjectType, type UploadContext } from './s3.types';
 
 @Injectable()
 export class S3Service {
-  private readonly s3: S3Client;
-  private readonly bucket: string;
-  private readonly region: string;
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
+  private readonly regionName: string;
 
   private readonly folderMap: Record<S3ObjectType, string> = {
     [S3ObjectType.PROFILE]: 'profile/',
@@ -29,42 +29,46 @@ export class S3Service {
   };
 
   constructor(private readonly configService: ConfigService) {
-    const region = this.configService.getOrThrow<string>('AWS_REGION');
-    const bucket = this.configService.getOrThrow<string>('AWS_S3_BUCKET');
+    const regionName = this.configService.getOrThrow<string>('AWS_REGION');
+    const bucketName = this.configService.getOrThrow<string>('AWS_S3_BUCKET');
     const accessKeyId =
       this.configService.getOrThrow<string>('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.getOrThrow<string>(
       'AWS_SECRET_ACCESS_KEY',
     );
 
-    this.region = region;
-    this.bucket = bucket;
+    this.regionName = regionName;
+    this.bucketName = bucketName;
 
     const s3Config: S3ClientConfig = {
-      region,
+      region: regionName,
       credentials: { accessKeyId, secretAccessKey },
     };
-    this.s3 = new S3Client(s3Config);
+    this.s3Client = new S3Client(s3Config);
   }
 
-  private isUploadContext(
-    arg: UploadContext | S3ObjectType,
-  ): arg is UploadContext {
-    return typeof arg === 'object' && arg !== null && 'type' in arg;
+  private isUploadContextType(
+    target: UploadContext | S3ObjectType,
+  ): target is UploadContext {
+    return typeof target === 'object' && target !== null && 'type' in target;
   }
 
-  private buildKey(ctx: UploadContext, originalName: string): string {
-    const ext = extname(originalName);
-    const id = uuidv4();
-    switch (ctx.type) {
+  private createObjectKey(
+    uploadContext: UploadContext,
+    originalFileName: string,
+  ): string {
+    const fileExtension = extname(originalFileName);
+    const uniqueId = uuidv4();
+
+    switch (uploadContext.type) {
       case S3ObjectType.GROUP:
-        return `group/${ctx.groupId}/${id}${ext}`;
+        return `group/${uploadContext.groupId}/${uniqueId}${fileExtension}`;
       case S3ObjectType.POST:
-        return ctx.postId
-          ? `post/${ctx.groupId}/${ctx.postId}/${id}${ext}`
-          : `post/${ctx.groupId}/${id}${ext}`;
+        return uploadContext.postId
+          ? `post/${uploadContext.groupId}/${uploadContext.postId}/${uniqueId}${fileExtension}`
+          : `post/${uploadContext.groupId}/${uniqueId}${fileExtension}`;
       case S3ObjectType.PROFILE:
-        return `profile/${ctx.userId}/${id}${ext}`;
+        return `profile/${uploadContext.userId}/${uniqueId}${fileExtension}`;
       default:
         throw new InternalServerErrorException(
           '지원하지 않는 업로드 컨텍스트입니다.',
@@ -74,73 +78,84 @@ export class S3Service {
 
   async uploadFile(
     file: Express.Multer.File,
-    arg2: UploadContext | S3ObjectType,
+    uploadTarget: UploadContext | S3ObjectType,
   ): Promise<string> {
-    if (this.isUploadContext(arg2)) {
-      const key = this.buildKey(arg2, file.originalname);
-      const params: PutObjectCommandInput = {
-        Bucket: this.bucket,
-        Key: key,
+    if (this.isUploadContextType(uploadTarget)) {
+      const objectKey = this.createObjectKey(uploadTarget, file.originalname);
+      const putParams: PutObjectCommandInput = {
+        Bucket: this.bucketName,
+        Key: objectKey,
         Body: file.buffer,
         ContentType: file.mimetype,
       };
       try {
-        await this.s3.send(new PutObjectCommand(params));
-        return key;
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        throw new InternalServerErrorException(`S3 업로드 실패: ${msg}`);
+        await this.s3Client.send(new PutObjectCommand(putParams));
+        return objectKey;
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        throw new InternalServerErrorException(
+          `S3 업로드 실패: ${errorMessage}`,
+        );
       }
     }
 
-    const folder = this.folderMap[arg2];
-    if (!folder) {
+    const folderPrefix = this.folderMap[uploadTarget];
+    if (!folderPrefix) {
       throw new InternalServerErrorException(
-        `S3 폴더 경로를 찾을 수 없습니다: ${String(arg2)}`,
+        `S3 폴더 경로를 찾을 수 없습니다: ${String(uploadTarget)}`,
       );
     }
-    const legacyKey = `${folder}${uuidv4()}${extname(file.originalname)}`;
-    const legacyParams: PutObjectCommandInput = {
-      Bucket: this.bucket,
+
+    const legacyKey = `${folderPrefix}${uuidv4()}${extname(file.originalname)}`;
+    const putParamsLegacy: PutObjectCommandInput = {
+      Bucket: this.bucketName,
       Key: legacyKey,
       Body: file.buffer,
       ContentType: file.mimetype,
     };
     try {
-      await this.s3.send(new PutObjectCommand(legacyParams));
+      await this.s3Client.send(new PutObjectCommand(putParamsLegacy));
       return legacyKey;
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new InternalServerErrorException(`S3 업로드 실패: ${msg}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new InternalServerErrorException(`S3 업로드 실패: ${errorMessage}`);
     }
   }
 
-  getFileUrl(key: string): string {
-    return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+  getFileUrl(objectKey: string): string {
+    return `https://${this.bucketName}.s3.${this.regionName}.amazonaws.com/${objectKey}`;
   }
 
-  async deleteFile(key: string): Promise<void> {
-    const params: DeleteObjectCommandInput = { Bucket: this.bucket, Key: key };
+  async deleteFile(objectKey: string): Promise<void> {
+    const deleteParams: DeleteObjectCommandInput = {
+      Bucket: this.bucketName,
+      Key: objectKey,
+    };
     try {
-      await this.s3.send(new DeleteObjectCommand(params));
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new InternalServerErrorException(`S3 삭제 실패: ${msg}`);
+      await this.s3Client.send(new DeleteObjectCommand(deleteParams));
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new InternalServerErrorException(`S3 삭제 실패: ${errorMessage}`);
     }
   }
 
-  async deleteFilesInBatches(keys: string[]): Promise<void> {
-    if (keys.length === 0) {
+  async deleteFilesInBatches(objectKeys: string[]): Promise<void> {
+    if (objectKeys.length === 0) {
       return;
     }
-    const chunkSize = 1000;
-    for (let i = 0; i < keys.length; i += chunkSize) {
-      const chunk: ObjectIdentifier[] = keys
-        .slice(i, i + chunkSize)
-        .map((k): ObjectIdentifier => ({ Key: k }));
-      await this.s3.send(
+
+    const batchSize = 1000;
+    for (let i = 0; i < objectKeys.length; i += batchSize) {
+      const chunk: ObjectIdentifier[] = objectKeys
+        .slice(i, i + batchSize)
+        .map((key) => ({ Key: key }));
+
+      await this.s3Client.send(
         new DeleteObjectsCommand({
-          Bucket: this.bucket,
+          Bucket: this.bucketName,
           Delete: { Objects: chunk, Quiet: true },
         }),
       );
@@ -148,41 +163,43 @@ export class S3Service {
   }
 
   private async deleteAllByPrefix(prefix: string): Promise<void> {
-    let token: string | undefined = undefined;
+    let continuationToken: string | undefined;
 
     do {
-      const listed: ListObjectsV2CommandOutput = await this.s3.send(
-        new ListObjectsV2Command({
-          Bucket: this.bucket,
-          Prefix: prefix,
-          ContinuationToken: token,
-        }),
-      );
-
-      const contents = listed.Contents ?? [];
-      const keys: string[] = contents
-        .map((o) => o.Key)
-        .filter((k): k is string => typeof k === 'string');
-
-      if (keys.length > 0) {
-        const objects: ObjectIdentifier[] = keys.map(
-          (k): ObjectIdentifier => ({ Key: k }),
+      const listedObjects: ListObjectsV2CommandOutput =
+        await this.s3Client.send(
+          new ListObjectsV2Command({
+            Bucket: this.bucketName,
+            Prefix: prefix,
+            ContinuationToken: continuationToken,
+          }),
         );
-        await this.s3.send(
+
+      const objectKeys = (listedObjects.Contents ?? [])
+        .map((object) => object.Key)
+        .filter((key): key is string => typeof key === 'string');
+
+      if (objectKeys.length > 0) {
+        const deleteTargets: ObjectIdentifier[] = objectKeys.map((key) => ({
+          Key: key,
+        }));
+        await this.s3Client.send(
           new DeleteObjectsCommand({
-            Bucket: this.bucket,
-            Delete: { Objects: objects, Quiet: true },
+            Bucket: this.bucketName,
+            Delete: { Objects: deleteTargets, Quiet: true },
           }),
         );
       }
 
-      token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
-    } while (token);
+      continuationToken = listedObjects.IsTruncated
+        ? listedObjects.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
   }
 
   async deleteAllByPrefixes(prefixes: string[]): Promise<void> {
-    for (const p of prefixes) {
-      await this.deleteAllByPrefix(p);
+    for (const prefix of prefixes) {
+      await this.deleteAllByPrefix(prefix);
     }
   }
 }

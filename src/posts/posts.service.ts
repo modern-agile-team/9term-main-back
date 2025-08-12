@@ -22,33 +22,42 @@ export class PostsService {
     private readonly postLikesRepository: PostLikesRepository,
   ) {}
 
+  private toImageUrl(key?: string | null): string | null {
+    return key ? this.s3Service.getFileUrl(key) : null;
+  }
+
   async createPost(
-    dto: CreatePostRequestDto,
+    createPostDto: CreatePostRequestDto,
     groupId: number,
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
-    let uploadedKey: string | undefined;
+    let uploadedImageKey: string | undefined;
 
     try {
       if (fileToUpload) {
-        uploadedKey = await this.s3Service.uploadFile(fileToUpload, {
+        uploadedImageKey = await this.s3Service.uploadFile(fileToUpload, {
           type: S3ObjectType.POST,
           groupId,
         });
       }
 
-      const data: CreatePostData = {
-        title: dto.title,
-        content: dto.content,
+      const createData: CreatePostData = {
+        title: createPostDto.title,
+        content: createPostDto.content,
         groupId,
         userId,
       };
 
-      return await this.postsRepository.createPostWithImage(data, uploadedKey);
-    } catch (error: unknown) {
-      if (uploadedKey) {
-        await this.s3Service.deleteFile(uploadedKey).catch(() => undefined);
+      return this.postsRepository.createPostWithImage(
+        createData,
+        uploadedImageKey,
+      );
+    } catch (error) {
+      if (uploadedImageKey) {
+        await this.s3Service
+          .deleteFile(uploadedImageKey)
+          .catch(() => undefined);
       }
       throw error;
     }
@@ -58,76 +67,83 @@ export class PostsService {
     groupId: number,
     userId: number,
   ): Promise<PostSummary[]> {
-    const posts =
+    const postsWithCounts =
       await this.postsRepository.findPostsWithCommentsCount(groupId);
-    const postIds = posts.map((p) => p.id);
-    const liked = new Set(
-      await this.postLikesRepository.findLikedPostIdsByUser(userId, postIds),
-    );
 
-    return posts.map((p) => {
-      const firstImgKey = p.postImages?.[0]?.postImgPath;
-      const postImageUrl = firstImgKey
-        ? this.s3Service.getFileUrl(firstImgKey)
-        : null;
+    const postIds = postsWithCounts.map((post) => post.id);
+    const likedPostIds = await this.postLikesRepository.findLikedPostIdsByUser(
+      userId,
+      postIds,
+    );
+    const likedSet = new Set(likedPostIds);
+
+    return postsWithCounts.map((post) => {
+      const firstImageKey = post.postImages?.[0]?.postImgPath ?? null;
 
       return {
-        id: p.id,
-        groupId: p.groupId,
-        userId: p.userId,
-        user: { id: p.user.id, name: p.user.name },
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-        category: p.category,
+        id: post.id,
+        groupId: post.groupId,
+        userId: post.userId,
+        user: { id: post.user.id, name: post.user.name },
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        category: post.category,
 
-        title: p.title,
-        content: p.content,
-        postImageUrl,
+        title: post.title,
+        content: post.content,
+        postImageUrl: this.toImageUrl(firstImageKey),
 
-        commentsCount: p._count.comments,
-        likesCount: p._count.postLikes,
-
-        isLiked: liked.has(p.id),
+        commentsCount: post._count.comments,
+        likesCount: post._count.postLikes,
+        isLiked: likedSet.has(post.id),
       };
     });
   }
 
   async updatePost(
-    dto: UpdatePostRequestDto,
-    id: number,
+    updatePostDto: UpdatePostRequestDto,
+    postId: number,
     userId: number,
   ): Promise<Post> {
-    const post = await this.postsRepository.findPostById(id);
+    const post = await this.postsRepository.findPostById(postId);
     if (!post) {
-      throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
+      throw new NotFoundException(
+        `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
+      );
     }
     if (post.userId !== userId) {
       throw new ForbiddenException('이 게시물을 수정할 권한이 없습니다.');
     }
 
-    return this.postsRepository.updatePost(id, {
-      title: dto.title,
-      content: dto.content,
+    return this.postsRepository.updatePost(postId, {
+      title: updatePostDto.title,
+      content: updatePostDto.content,
     });
   }
 
-  async deletePost(id: number, userId: number): Promise<void> {
-    const post = await this.postsRepository.findPostById(id);
+  async deletePost(postId: number, userId: number): Promise<void> {
+    const post = await this.postsRepository.findPostById(postId);
     if (!post) {
-      throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
+      throw new NotFoundException(
+        `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
+      );
     }
     if (post.userId !== userId) {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
-    const keys = (post.postImages ?? [])
-      .map((pi) => pi.postImgPath)
-      .filter((k): k is string => typeof k === 'string' && k.length > 0);
+    const imageKeys = (post.postImages ?? [])
+      .map((img) => img.postImgPath)
+      .filter(
+        (key): key is string => typeof key === 'string' && key.length > 0,
+      );
 
-    if (keys.length > 0) {
-      await this.s3Service.deleteFilesInBatches(keys).catch(() => undefined);
+    if (imageKeys.length > 0) {
+      await this.s3Service
+        .deleteFilesInBatches(imageKeys)
+        .catch(() => undefined);
     }
 
-    await this.postsRepository.deletePost(id);
+    await this.postsRepository.deletePost(postId);
   }
 }

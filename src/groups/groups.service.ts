@@ -31,8 +31,8 @@ export class GroupsService {
   ) {}
 
   private resolveGroupImageUrl(key?: string | null): string {
-    const useKey = key ?? GroupsService.DEFAULT_GROUP_IMAGE_KEY;
-    return this.s3Service.getFileUrl(useKey);
+    const effectiveKey = key ?? GroupsService.DEFAULT_GROUP_IMAGE_KEY;
+    return this.s3Service.getFileUrl(effectiveKey);
   }
 
   async createGroup(
@@ -40,45 +40,50 @@ export class GroupsService {
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<GroupResponseDto> {
-    const existing = await this.groupsRepository.findGroupByName(
+    const existingGroup = await this.groupsRepository.findGroupByName(
       createGroupDto.name,
     );
-    if (existing) {
+    if (existingGroup) {
       throw new ConflictException('이미 존재하는 그룹 이름입니다.');
     }
 
-    const createBase: CreateGroupInput = {
+    const createData: CreateGroupInput = {
       ...createGroupDto,
       userId,
       groupImagePath: undefined,
     };
-    const created =
-      await this.groupsRepository.createGroupWithAdmin(createBase);
 
-    let uploadedKey: string | undefined;
+    const createdGroup =
+      await this.groupsRepository.createGroupWithAdmin(createData);
+
+    let uploadedImageKey: string | undefined;
+
     try {
       if (fileToUpload) {
-        uploadedKey = await this.s3Service.uploadFile(fileToUpload, {
+        uploadedImageKey = await this.s3Service.uploadFile(fileToUpload, {
           type: S3ObjectType.GROUP,
-          groupId: created.id,
+          groupId: createdGroup.id,
         });
-        await this.groupsRepository.updateGroupById(created.id, {
-          groupImgPath: uploadedKey,
+
+        await this.groupsRepository.updateGroupById(createdGroup.id, {
+          groupImgPath: uploadedImageKey,
         });
       }
 
-      const finalGroup = uploadedKey
-        ? await this.groupsRepository.findGroupById(created.id)
-        : created;
+      const groupForResponse = uploadedImageKey
+        ? await this.groupsRepository.findGroupById(createdGroup.id)
+        : createdGroup;
 
-      return plainToInstance(GroupResponseDto, finalGroup, {
+      return plainToInstance(GroupResponseDto, groupForResponse, {
         excludeExtraneousValues: true,
       });
-    } catch (e) {
-      if (uploadedKey) {
-        await this.s3Service.deleteFile(uploadedKey).catch(() => undefined);
+    } catch (error) {
+      if (uploadedImageKey) {
+        await this.s3Service
+          .deleteFile(uploadedImageKey)
+          .catch(() => undefined);
       }
-      throw e;
+      throw error;
     }
   }
 
@@ -86,13 +91,13 @@ export class GroupsService {
     const groups = await this.groupsRepository.findAllGroups();
 
     return Promise.all(
-      groups.map(async (g) =>
+      groups.map(async (group) =>
         plainToInstance(
           GroupWithMemberCountDto,
           {
-            ...g,
-            memberCount: g._count.userGroups,
-            groupImageUrl: this.resolveGroupImageUrl(g.groupImgPath),
+            ...group,
+            memberCount: group._count.userGroups,
+            groupImageUrl: this.resolveGroupImageUrl(group.groupImgPath),
           },
           { excludeExtraneousValues: true },
         ),
@@ -108,6 +113,7 @@ export class GroupsService {
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
+
     const groupImageUrl = this.resolveGroupImageUrl(group.groupImgPath);
 
     if (!userId) {
@@ -144,19 +150,16 @@ export class GroupsService {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    const membership = await this.groupsRepository.findGroupUser(
-      groupId,
-      userId,
-    );
-    if (!membership || membership.role !== UserGroupRole.MANAGER) {
+    const member = await this.groupsRepository.findGroupUser(groupId, userId);
+    if (!member || member.role !== UserGroupRole.MANAGER) {
       throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
     }
 
-    const updated = await this.groupsRepository.updateGroupById(groupId, {
+    const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
       ...updateGroupDto,
     } satisfies UpdateGroupInput);
 
-    return plainToInstance(GroupResponseDto, updated, {
+    return plainToInstance(GroupResponseDto, updatedGroup, {
       excludeExtraneousValues: true,
     });
   }
@@ -171,44 +174,44 @@ export class GroupsService {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    const membership = await this.groupsRepository.findGroupUser(
-      groupId,
-      userId,
-    );
-    if (!membership || membership.role !== UserGroupRole.MANAGER) {
+    const member = await this.groupsRepository.findGroupUser(groupId, userId);
+    if (!member || member.role !== UserGroupRole.MANAGER) {
       throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
     }
 
-    const previousKey = await this.groupsRepository.findGroupImagePath(groupId);
+    const previousImageKey =
+      await this.groupsRepository.findGroupImagePath(groupId);
 
     if (!fileToUpload) {
       const cleared =
         await this.groupsRepository.clearGroupImagePathIfPresent(groupId);
 
-      if (cleared && previousKey) {
-        await this.s3Service.deleteFile(previousKey).catch(() => undefined);
+      if (cleared && previousImageKey) {
+        await this.s3Service
+          .deleteFile(previousImageKey)
+          .catch(() => undefined);
       }
 
-      const refreshed = await this.groupsRepository.findGroupById(groupId);
-      return plainToInstance(GroupResponseDto, refreshed, {
+      const refreshedGroup = await this.groupsRepository.findGroupById(groupId);
+      return plainToInstance(GroupResponseDto, refreshedGroup, {
         excludeExtraneousValues: true,
       });
     }
 
-    const uploadedKey = await this.s3Service.uploadFile(fileToUpload, {
+    const uploadedImageKey = await this.s3Service.uploadFile(fileToUpload, {
       type: S3ObjectType.GROUP,
       groupId,
     });
 
-    const updated = await this.groupsRepository.updateGroupById(groupId, {
-      groupImgPath: uploadedKey,
+    const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
+      groupImgPath: uploadedImageKey,
     });
 
-    if (previousKey) {
-      await this.s3Service.deleteFile(previousKey).catch(() => undefined);
+    if (previousImageKey) {
+      await this.s3Service.deleteFile(previousImageKey).catch(() => undefined);
     }
 
-    return plainToInstance(GroupResponseDto, updated, {
+    return plainToInstance(GroupResponseDto, updatedGroup, {
       excludeExtraneousValues: true,
     });
   }
