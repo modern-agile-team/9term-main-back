@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   Delete,
   Get,
@@ -15,7 +14,6 @@ import { User } from 'src/auth/user.decorator';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { CustomJwtAuthGuard } from '../auth/guards/access.guard';
 import { AuthenticatedUserResponse } from '../auth/interfaces/authenticated-user-response.interface';
-import { UpdateUserDto } from './dto/requests/update-user.dto';
 import { UserProfileDto } from './dto/responses/user-profile.dto';
 import { UsersService } from './users.service';
 
@@ -43,7 +41,6 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('profileImage'))
   async updateMyProfile(
     @UploadedFile() profileImage: Express.Multer.File,
-    @Body() updateUserDto: UpdateUserDto,
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
     const userId = user.userId;
