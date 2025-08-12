@@ -1,10 +1,10 @@
 import {
+  DeleteObjectCommand,
+  DeleteObjectCommandInput,
+  PutObjectCommand,
+  PutObjectCommandInput,
   S3Client,
   S3ClientConfig,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  PutObjectCommandInput,
-  DeleteObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import {
   Injectable,
@@ -24,7 +24,7 @@ export class S3Service {
   private readonly logger = new Logger(S3Service.name);
 
   private readonly folderMap: Record<S3ObjectType, string> = {
-    [S3ObjectType.PROFILE]: 'profile/',
+    [S3ObjectType.PROFILE]: 'profile/user_uploads/',
     [S3ObjectType.GROUP]: 'group/',
     [S3ObjectType.POST]: 'post/',
   };
