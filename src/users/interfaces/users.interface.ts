@@ -1,4 +1,5 @@
 import { Prisma, User } from '@prisma/client';
+import { UserProfileDto } from '../dto/responses/user-profile.dto';
 
 export interface IUsersRepository {
   findByUsername(username: string): Promise<User | null>;
@@ -9,7 +10,7 @@ export interface IUsersRepository {
 export interface IUsersService {
   createUser(userData: CreateUserInput): Promise<User>;
   findUserByUsername(username: string): Promise<User | null>;
-  findMyProfile(userId: number): Promise<UserProfile>;
+  findMyProfile(userId: number): Promise<UserProfileDto>;
 }
 export interface UserSummary {
   userId: number;

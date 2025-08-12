@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
-import { UserProfileDto } from 'src/users/dto/reponses/user-profile.dto';
+import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
 import { CreateUserInput, IUsersService } from './interfaces/users.interface';
 import { UsersRepository } from './users.repository';
 
@@ -48,6 +48,14 @@ export class UsersService implements IUsersService {
     return defaultKeys[randomIndex];
   }
 
+  // 프로필 이미지 키를 가져오고 URL로 변환
+  private getProfileImageUrl(user: User): string {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const profileImgKey =
+      user.profileImgPath ?? this.getRandomDefaultImageKey();
+    return this.s3Service.getFileUrl(profileImgKey);
+  }
+
   // 유저 생성 시 프로필 이미지 부여
   async createUser(userData: CreateUserInput): Promise<User> {
     userData.profileImgPath = this.getRandomDefaultImageKey();
@@ -60,11 +68,7 @@ export class UsersService implements IUsersService {
 
   async findMyProfile(userId: number): Promise<UserProfileDto> {
     const user = await this.findUserOrThrow(userId);
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const profileImgKey =
-      user.profileImgPath ?? this.getRandomDefaultImageKey();
-    const profileImgUrl = this.s3Service.getFileUrl(profileImgKey);
+    const profileImgUrl = this.getProfileImageUrl(user);
 
     return plainToInstance(
       UserProfileDto,
@@ -72,7 +76,7 @@ export class UsersService implements IUsersService {
         userId: user.id,
         name: user.name,
         username: user.username,
-        profileImgPath: profileImgUrl,
+        profileImgUrl: profileImgUrl,
       },
       { excludeExtraneousValues: true },
     );
