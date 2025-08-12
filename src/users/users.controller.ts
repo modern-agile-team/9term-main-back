@@ -4,7 +4,7 @@ import { User } from 'src/auth/user.decorator';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { CustomJwtAuthGuard } from '../auth/guards/access.guard';
 import { AuthenticatedUserResponse } from '../auth/interfaces/authenticated-user-response.interface';
-import { UserProfileDto } from './dto/reponses/user-profile.dto';
+import { UserProfileDto } from './dto/responses/user-profile.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')

@@ -28,6 +28,7 @@ export class AuthService {
     const hashedPassword = await this.passwordEncoderService.hash(
       signupRequestDto.password,
     );
+
     await this.usersService.createUser({
       username: signupRequestDto.username,
       name: signupRequestDto.name,
