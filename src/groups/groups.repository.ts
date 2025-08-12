@@ -19,8 +19,8 @@ type TxClient = Prisma.TransactionClient;
 export class GroupsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findGroupByName(name: string): Promise<Group | null> {
-    return this.prisma.group.findFirst({ where: { name } });
+  findGroupByName(name: string, tx?: TxClient): Promise<Group | null> {
+    return (tx ?? this.prisma).group.findFirst({ where: { name } });
   }
 
   createGroupWithAdmin(data: CreateGroupInput): Promise<Group> {
@@ -61,27 +61,40 @@ export class GroupsRepository {
     });
   }
 
-  getMemberCount(groupId: number): Promise<number> {
-    return this.prisma.userGroup.count({ where: { groupId } });
+  getMemberCount(groupId: number, tx?: TxClient): Promise<number> {
+    return (tx ?? this.prisma).userGroup.count({ where: { groupId } });
   }
 
-  findGroupUser(groupId: number, userId: number): Promise<UserGroup | null> {
-    return this.prisma.userGroup.findFirst({ where: { groupId, userId } });
+  findGroupUser(
+    groupId: number,
+    userId: number,
+    tx?: TxClient,
+  ): Promise<UserGroup | null> {
+    return (tx ?? this.prisma).userGroup.findUnique({
+      where: { userId_groupId: { userId, groupId } },
+    });
   }
 
-  createGroupUser(data: GroupUserInput): Promise<UserGroup> {
-    return this.prisma.userGroup.create({ data });
+  createGroupUser(data: GroupUserInput, tx?: TxClient): Promise<UserGroup> {
+    return (tx ?? this.prisma).userGroup.create({ data });
   }
 
-  updateGroupById(groupId: number, data: UpdateGroupInput): Promise<Group> {
-    return this.prisma.group.update({
+  updateGroupById(
+    groupId: number,
+    data: UpdateGroupInput,
+    tx?: TxClient,
+  ): Promise<Group> {
+    return (tx ?? this.prisma).group.update({
       where: { id: groupId },
       data,
     });
   }
 
-  async findGroupImagePath(groupId: number): Promise<string | null> {
-    const group = await this.prisma.group.findUnique({
+  async findGroupImagePath(
+    groupId: number,
+    tx?: TxClient,
+  ): Promise<string | null> {
+    const group = await (tx ?? this.prisma).group.findUnique({
       where: { id: groupId },
       select: { groupImgPath: true },
     });
@@ -91,19 +104,29 @@ export class GroupsRepository {
   async setGroupImagePathIfEmpty(
     groupId: number,
     imageKey: string,
+    tx?: TxClient,
   ): Promise<boolean> {
-    const result = await this.prisma.group.updateMany({
+    const result = await (tx ?? this.prisma).group.updateMany({
       where: { id: groupId, groupImgPath: null },
       data: { groupImgPath: imageKey },
     });
     return result.count === 1;
   }
 
-  async clearGroupImagePathIfPresent(groupId: number): Promise<boolean> {
-    const result = await this.prisma.group.updateMany({
+  async clearGroupImagePathIfPresent(
+    groupId: number,
+    tx?: TxClient,
+  ): Promise<boolean> {
+    const result = await (tx ?? this.prisma).group.updateMany({
       where: { id: groupId, groupImgPath: { not: null } },
       data: { groupImgPath: null },
     });
     return result.count === 1;
+  }
+
+  async deleteGroupById(groupId: number, tx?: TxClient): Promise<void> {
+    await (tx ?? this.prisma).group.delete({
+      where: { id: groupId },
+    });
   }
 }

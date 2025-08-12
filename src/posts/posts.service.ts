@@ -3,18 +3,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { S3Service } from 'src/s3/s3.service';
+import { S3ObjectType } from 'src/s3/s3.types';
+
+import { PostsRepository } from './posts.repository';
+import { PostLikesRepository } from 'src/likes/post-likes.repository';
+
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
-import {
-  CreatePostData,
-  UpdatePostData,
-  Post,
-  PostSummary,
-} from './interfaces/post.interface';
-import { PostsRepository } from './posts.repository';
-import { S3ObjectType } from 'src/s3/s3.types';
-import { S3Service } from 'src/s3/s3.service';
-import { PostLikesRepository } from 'src/likes/post-likes.repository';
+
+import { CreatePostData, Post, PostSummary } from './interfaces/post.interface';
 
 @Injectable()
 export class PostsService {
@@ -25,37 +23,34 @@ export class PostsService {
   ) {}
 
   async createPost(
-    createPostDto: CreatePostRequestDto,
+    dto: CreatePostRequestDto,
     groupId: number,
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
-    let postImagePath: string | undefined;
+    let uploadedKey: string | undefined;
 
     try {
       if (fileToUpload) {
-        postImagePath = await this.s3Service.uploadFile(
-          fileToUpload,
-          S3ObjectType.POST,
-        );
+        uploadedKey = await this.s3Service.uploadFile(fileToUpload, {
+          type: S3ObjectType.POST,
+          groupId,
+        });
       }
 
-      const createPostData: CreatePostData = {
-        title: createPostDto.title,
-        content: createPostDto.content,
+      const data: CreatePostData = {
+        title: dto.title,
+        content: dto.content,
         groupId,
         userId,
       };
 
-      return await this.postsRepository.createPostWithImage(
-        createPostData,
-        postImagePath,
-      );
-    } catch (err) {
-      if (postImagePath) {
-        await this.s3Service.deleteFile(postImagePath);
+      return await this.postsRepository.createPostWithImage(data, uploadedKey);
+    } catch (error: unknown) {
+      if (uploadedKey) {
+        await this.s3Service.deleteFile(uploadedKey).catch(() => undefined);
       }
-      throw err;
+      throw error;
     }
   }
 
@@ -65,59 +60,40 @@ export class PostsService {
   ): Promise<PostSummary[]> {
     const posts =
       await this.postsRepository.findPostsWithCommentsCount(groupId);
-    const postIds = posts.map((post) => post.id);
-
-    const likedPostIds = new Set(
+    const postIds = posts.map((p) => p.id);
+    const liked = new Set(
       await this.postLikesRepository.findLikedPostIdsByUser(userId, postIds),
     );
-    return posts.map((post) => {
-      const imagePath = post.postImages?.[0]?.postImgPath;
-      const postImageUrl = imagePath
-        ? this.s3Service.getFileUrl(imagePath)
+
+    return posts.map((p) => {
+      const firstImgKey = p.postImages?.[0]?.postImgPath;
+      const postImageUrl = firstImgKey
+        ? this.s3Service.getFileUrl(firstImgKey)
         : null;
 
       return {
-        id: post.id,
-        groupId: post.groupId,
-        userId: post.userId,
-        user: { id: post.user.id, name: post.user.name },
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        category: post.category,
+        id: p.id,
+        groupId: p.groupId,
+        userId: p.userId,
+        user: { id: p.user.id, name: p.user.name },
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        category: p.category,
 
-        title: post.title,
-        content: post.content,
+        title: p.title,
+        content: p.content,
         postImageUrl,
 
-        commentsCount: post._count.comments,
-        likesCount: post._count.postLikes,
+        commentsCount: p._count.comments,
+        likesCount: p._count.postLikes,
 
-        isLiked: likedPostIds.has(post.id),
+        isLiked: liked.has(p.id),
       };
     });
   }
 
-  // async getPostById(id: number): Promise<PostSummary> {
-  //   const post = await this.postsRepository.findPostById(id);
-  //   if (!post) {
-  //     throw new NotFoundException(`ID가 ${id}인 게시물을 찾을 수 없습니다.`);
-  //   }
-
-  //   const imagePath = post.postImages?.[0]?.postImgPath;
-  //   const postImageUrl = imagePath
-  //     ? this.s3Service.getFileUrl(imagePath)
-  //     : null;
-
-  //   return {
-  //     ...post,
-  //     commentsCount: post._count.comments,
-  //     likesCount: post._count.postLikes,
-  //     postImageUrl,
-  //   };
-  // }
-
   async updatePost(
-    updatePostDto: UpdatePostRequestDto,
+    dto: UpdatePostRequestDto,
     id: number,
     userId: number,
   ): Promise<Post> {
@@ -129,12 +105,10 @@ export class PostsService {
       throw new ForbiddenException('이 게시물을 수정할 권한이 없습니다.');
     }
 
-    const updateData: UpdatePostData = {
-      title: updatePostDto.title,
-      content: updatePostDto.content,
-    };
-
-    return await this.postsRepository.updatePost(id, updateData);
+    return this.postsRepository.updatePost(id, {
+      title: dto.title,
+      content: dto.content,
+    });
   }
 
   async deletePost(id: number, userId: number): Promise<void> {
@@ -146,8 +120,12 @@ export class PostsService {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
-    if (post.postImages?.[0]) {
-      await this.s3Service.deleteFile(post.postImages[0].postImgPath);
+    const keys = (post.postImages ?? [])
+      .map((pi) => pi.postImgPath)
+      .filter((k): k is string => typeof k === 'string' && k.length > 0);
+
+    if (keys.length > 0) {
+      await this.s3Service.deleteFilesInBatches(keys).catch(() => undefined);
     }
 
     await this.postsRepository.deletePost(id);
