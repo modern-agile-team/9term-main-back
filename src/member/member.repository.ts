@@ -66,6 +66,7 @@ export class MemberRepository {
     userId: number;
     role: UserGroupRole;
     status: MembershipStatus;
+    leftAt?: Date | null;
   }) {
     return this.prisma.userGroup.upsert({
       where: {
@@ -77,7 +78,7 @@ export class MemberRepository {
       update: {
         role: data.role,
         status: data.status,
-        leftAt: null,
+        ...(data.leftAt !== undefined ? { leftAt: data.leftAt } : {}),
       },
       create: data,
       include: {

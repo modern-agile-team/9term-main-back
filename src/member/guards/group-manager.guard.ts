@@ -3,7 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   ForbiddenException,
-  InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { MembersService } from '../member.service';
 import { Request } from 'express';
@@ -21,7 +21,7 @@ export class GroupManagerGuard implements CanActivate {
     const userId = user.userId;
 
     if (!groupId) {
-      throw new InternalServerErrorException('groupId 값이 필요합니다.');
+      throw new BadRequestException('groupId 값이 필요합니다.');
     }
     const member = await this.membersService.getGroupMember(groupId, userId);
     if (!member || member.role !== UserGroupRole.MANAGER) {

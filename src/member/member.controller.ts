@@ -8,7 +8,6 @@ import {
   Body,
   NotFoundException,
   Query,
-  BadRequestException,
 } from '@nestjs/common';
 import { MembersService } from './member.service';
 import { GroupMemberGuard } from './guards/group-member.guard';
@@ -17,13 +16,9 @@ import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
-import {
-  UpdateMemberStatusDto,
-  MemberAction,
-} from './dto/update-member-status.dto';
+import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { MemberSwagger, ApiMembers } from './member.swagger';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { MembershipStatus } from '@prisma/client';
 import { User } from '../auth/user.decorator';
 
 @Controller('groups/:groupId/members')
@@ -39,29 +34,10 @@ export class MembersController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Query('status') status?: string,
   ): Promise<MemberResponseDto[]> {
-    if (!status) {
-      return this.membersService.getAllMembersWithStatus(groupId);
-    }
-    const statusEnum =
-      MembershipStatus[status as keyof typeof MembershipStatus];
-    if (!statusEnum) {
-      throw new BadRequestException(`유효하지 않은 status 값입니다: ${status}`);
-    }
-
-    switch (statusEnum) {
-      case MembershipStatus.PENDING:
-        return this.membersService.getPendingMembers(groupId);
-      case MembershipStatus.APPROVED:
-        return this.membersService.getApprovedMembers(groupId);
-      case MembershipStatus.REJECTED:
-        return this.membersService.getRejectedMembers(groupId);
-      case MembershipStatus.LEFT:
-        return this.membersService.getLeftMembers(groupId);
-      default:
-        throw new BadRequestException(
-          `유효하지 않은 status 값입니다: ${status}`,
-        );
-    }
+    return this.membersService.getMembersByGroupWithStatusString(
+      groupId,
+      status,
+    );
   }
 
   @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
@@ -104,36 +80,10 @@ export class MembersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body() updateStatusDto: UpdateMemberStatusDto,
   ): Promise<{ message: string; member: MemberResponseDto }> {
-    const { action } = updateStatusDto;
-    return this.executeAction(groupId, userId, action);
-  }
-
-  private async executeAction(
-    groupId: number,
-    userId: number,
-    action: MemberAction,
-  ): Promise<{ message: string; member: MemberResponseDto }> {
-    switch (action) {
-      case MemberAction.APPROVE: {
-        const member = await this.membersService.approveMembership(
-          groupId,
-          userId,
-        );
-        return { message: '가입 신청이 승인되었습니다.', member };
-      }
-      case MemberAction.REJECT: {
-        const member = await this.membersService.rejectMembership(
-          groupId,
-          userId,
-        );
-        return { message: '가입 신청이 거절되었습니다.', member };
-      }
-      case MemberAction.LEFT: {
-        return this.membersService.leaveGroup(groupId, userId);
-      }
-      default: {
-        throw new BadRequestException('올바르지 않은 액션입니다.');
-      }
-    }
+    return this.membersService.updateMemberStatus(
+      groupId,
+      userId,
+      updateStatusDto.action,
+    );
   }
 }

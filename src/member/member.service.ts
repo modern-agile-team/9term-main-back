@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { MemberRepository } from './member.repository';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
@@ -13,33 +14,60 @@ import {
   User,
   UserGroup as PrismaUserGroup,
 } from '@prisma/client';
+import { MemberAction } from './dto/update-member-status.dto';
 
 @Injectable()
 export class MembersService {
   constructor(private readonly memberRepository: MemberRepository) {}
 
-  async getMemberList(groupId: number): Promise<MemberResponseDto[]> {
-    const members = await this.memberRepository.findMembersByGroup(groupId, {
-      status: MembershipStatus.APPROVED,
-    });
+  async getMembersByGroup(
+    groupId: number,
+    status?: MembershipStatus,
+  ): Promise<MemberResponseDto[]> {
+    const filters = status ? { status } : undefined;
+    const members = await this.memberRepository.findMembersByGroup(
+      groupId,
+      filters,
+    );
     return this.transformToResponseDto(members);
   }
 
-  async getPendingMembers(groupId: number): Promise<MemberResponseDto[]> {
-    const pendingMembers = await this.memberRepository.findMembersByGroup(
-      groupId,
-      {
-        status: MembershipStatus.PENDING,
-      },
-    );
-
-    return this.transformToResponseDto(pendingMembers);
+  async getMembersByGroupWithStatusString(
+    groupId: number,
+    status?: string,
+  ): Promise<MemberResponseDto[]> {
+    if (!status) {
+      return this.getMembersByGroup(groupId);
+    }
+    const statusEnum =
+      MembershipStatus[status as keyof typeof MembershipStatus];
+    if (!statusEnum) {
+      throw new BadRequestException(`유효하지 않은 status 값입니다: ${status}`);
+    }
+    return this.getMembersByGroup(groupId, statusEnum);
   }
 
-  async getAllMembersWithStatus(groupId: number): Promise<MemberResponseDto[]> {
-    const allMembers = await this.memberRepository.findMembersByGroup(groupId);
-
-    return this.transformToResponseDto(allMembers);
+  async updateMemberStatus(
+    groupId: number,
+    userId: number,
+    action: MemberAction,
+  ): Promise<{ message: string; member: MemberResponseDto }> {
+    switch (action) {
+      case MemberAction.APPROVE: {
+        const member = await this.approveMembership(groupId, userId);
+        return { message: '가입 신청이 승인되었습니다.', member };
+      }
+      case MemberAction.REJECT: {
+        const member = await this.rejectMembership(groupId, userId);
+        return { message: '가입 신청이 거절되었습니다.', member };
+      }
+      case MemberAction.LEFT: {
+        return this.leaveGroup(groupId, userId);
+      }
+      default: {
+        throw new BadRequestException('올바르지 않은 액션입니다.');
+      }
+    }
   }
 
   private transformToResponseDto(
@@ -184,29 +212,5 @@ export class MembersService {
     );
 
     return this.transformToResponseDto([updatedMember])[0];
-  }
-
-  async getApprovedMembers(groupId: number): Promise<MemberResponseDto[]> {
-    const approvedMembers = await this.memberRepository.findMembersByGroup(
-      groupId,
-      { status: MembershipStatus.APPROVED },
-    );
-    return this.transformToResponseDto(approvedMembers);
-  }
-
-  async getRejectedMembers(groupId: number): Promise<MemberResponseDto[]> {
-    const rejectedMembers = await this.memberRepository.findMembersByGroup(
-      groupId,
-      { status: MembershipStatus.REJECTED },
-    );
-    return this.transformToResponseDto(rejectedMembers);
-  }
-
-  async getLeftMembers(groupId: number): Promise<MemberResponseDto[]> {
-    const leftMembers = await this.memberRepository.findMembersByGroup(
-      groupId,
-      { status: MembershipStatus.LEFT },
-    );
-    return this.transformToResponseDto(leftMembers);
   }
 }
