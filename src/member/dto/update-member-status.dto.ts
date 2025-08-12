@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-
-export enum MemberAction {
-  APPROVE = 'APPROVE',
-  REJECT = 'REJECT',
-  LEFT = 'LEFT',
-}
+import { MemberAction } from '../member-action.enum';
 
 export class UpdateMemberStatusDto {
   @ApiProperty({

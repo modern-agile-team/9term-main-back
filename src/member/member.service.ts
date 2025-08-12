@@ -2,24 +2,40 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
 import { MemberRepository } from './member.repository';
+import { GroupsRepository } from '../groups/groups.repository';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
+import { MembershipStatus, UserGroupRole } from '@prisma/client';
+import { MemberAction } from './member-action.enum';
 import {
-  MembershipStatus,
-  UserGroupRole,
-  User,
-  UserGroup as PrismaUserGroup,
-} from '@prisma/client';
-import { MemberAction } from './dto/update-member-status.dto';
+  toMemberResponseDto,
+  toMemberResponseList,
+} from './mappers/member.mapper';
 
 @Injectable()
 export class MembersService {
-  constructor(private readonly memberRepository: MemberRepository) {}
+  constructor(
+    private readonly memberRepository: MemberRepository,
+    private readonly groupsRepository: GroupsRepository,
+  ) {}
 
+  private async ensureGroupExists(groupId: number): Promise<void> {
+    const group = await this.groupsRepository.findGroupById(groupId);
+    if (!group) {
+      throw new NotFoundException('그룹이 존재하지 않습니다.');
+    }
+  }
+
+  private async getExistingMemberOrThrow(groupId: number, userId: number) {
+    const member = await this.memberRepository.findGroupMember(groupId, userId);
+    if (!member) {
+      throw new NotFoundException('멤버가 존재하지 않습니다.');
+    }
+    return member;
+  }
   async getMembersByGroup(
     groupId: number,
     status?: MembershipStatus,
@@ -29,7 +45,7 @@ export class MembersService {
       groupId,
       filters,
     );
-    return this.transformToResponseDto(members);
+    return toMemberResponseList(members);
   }
 
   async getMembersByGroupWithStatusString(
@@ -45,6 +61,46 @@ export class MembersService {
       throw new BadRequestException(`유효하지 않은 status 값입니다: ${status}`);
     }
     return this.getMembersByGroup(groupId, statusEnum);
+  }
+
+  async getGroupMember(
+    groupId: number,
+    userId: number,
+  ): Promise<MemberResponseDto> {
+    const member = await this.getExistingMemberOrThrow(groupId, userId);
+    return toMemberResponseDto(member);
+  }
+
+  async joinGroup(
+    dto: JoinMemberRequestDto & { userId: number },
+  ): Promise<{ message: string; member: MemberResponseDto }> {
+    const { groupId, userId, status = MembershipStatus.PENDING } = dto;
+    await this.ensureGroupExists(groupId);
+
+    const existingMembership = await this.memberRepository.findGroupMember(
+      groupId,
+      userId,
+    );
+
+    if (
+      existingMembership &&
+      (existingMembership.status === MembershipStatus.APPROVED ||
+        existingMembership.status === MembershipStatus.PENDING)
+    ) {
+      throw new ConflictException('이미 신청 중이거나 가입된 그룹입니다.');
+    }
+
+    const newMember = await this.memberRepository.upsertMember({
+      groupId,
+      userId,
+      role: UserGroupRole.MEMBER,
+      status,
+    });
+
+    return {
+      message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
+      member: toMemberResponseDto(newMember),
+    };
   }
 
   async updateMemberStatus(
@@ -70,49 +126,11 @@ export class MembersService {
     }
   }
 
-  private transformToResponseDto(
-    members: (PrismaUserGroup & { user: User })[],
-  ): MemberResponseDto[] {
-    return members.map((member) => {
-      if (!member.user) {
-        throw new InternalServerErrorException('유저 정보가 없습니다.');
-      }
-      return {
-        userId: member.userId,
-        name: member.user.name,
-        role: member.role,
-        joinedAt: member.createdAt,
-        status: member.status,
-      };
-    });
-  }
-
-  async getGroupMember(
-    groupId: number,
-    userId: number,
-  ): Promise<MemberResponseDto | null> {
-    const member = await this.memberRepository.findGroupMember(groupId, userId);
-    if (!member) {
-      throw new NotFoundException('멤버가 존재하지 않습니다.');
-    }
-    return {
-      userId: member.userId,
-      name: member.user.name,
-      role: member.role,
-      joinedAt: member.createdAt,
-      status: member.status,
-    };
-  }
-
   async leaveGroup(
     groupId: number,
     userId: number,
   ): Promise<{ message: string; member: MemberResponseDto }> {
-    const member = await this.memberRepository.findGroupMember(groupId, userId);
-
-    if (!member) {
-      throw new NotFoundException('멤버가 존재하지 않습니다.');
-    }
+    const member = await this.getExistingMemberOrThrow(groupId, userId);
 
     if (member.status !== MembershipStatus.APPROVED) {
       throw new ConflictException('승인된 멤버만 그룹을 탈퇴할 수 있습니다.');
@@ -133,38 +151,7 @@ export class MembersService {
 
     return {
       message: '그룹을 탈퇴했습니다.',
-      member: this.transformToResponseDto([updatedMember])[0],
-    };
-  }
-
-  async joinGroup(
-    dto: JoinMemberRequestDto & { userId: number },
-  ): Promise<{ message: string; member: MemberResponseDto }> {
-    const { groupId, userId, status = MembershipStatus.PENDING } = dto;
-
-    const existingMembership = await this.memberRepository.findGroupMember(
-      groupId,
-      userId,
-    );
-
-    if (
-      existingMembership &&
-      (existingMembership.status === MembershipStatus.APPROVED ||
-        existingMembership.status === MembershipStatus.PENDING)
-    ) {
-      throw new ConflictException('이미 신청 중이거나 가입된 그룹입니다.');
-    }
-
-    const newMember = await this.memberRepository.upsertMember({
-      groupId,
-      userId,
-      role: UserGroupRole.MEMBER,
-      status,
-    });
-
-    return {
-      message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
-      member: this.transformToResponseDto([newMember])[0],
+      member: toMemberResponseDto(updatedMember),
     };
   }
 
@@ -188,7 +175,7 @@ export class MembersService {
       },
     );
 
-    return this.transformToResponseDto([updatedMember])[0];
+    return toMemberResponseDto(updatedMember);
   }
 
   async rejectMembership(
@@ -211,6 +198,6 @@ export class MembersService {
       },
     );
 
-    return this.transformToResponseDto([updatedMember])[0];
+    return toMemberResponseDto(updatedMember);
   }
 }

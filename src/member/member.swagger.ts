@@ -10,10 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
-import {
-  UpdateMemberStatusDto,
-  MemberAction,
-} from './dto/update-member-status.dto';
+import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { MemberAction } from './member-action.enum';
 
 const unauthorizedResponse = () =>
   ApiResponse({

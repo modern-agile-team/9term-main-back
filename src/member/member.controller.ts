@@ -6,7 +6,6 @@ import {
   UseGuards,
   Post,
   Body,
-  NotFoundException,
   Query,
 } from '@nestjs/common';
 import { MembersService } from './member.service';
@@ -47,12 +46,8 @@ export class MembersController {
   async getGroupMember(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<MemberResponseDto | null> {
-    const member = await this.membersService.getGroupMember(groupId, id);
-    if (!member) {
-      throw new NotFoundException('해당 멤버가 존재하지 않습니다.');
-    }
-    return member;
+  ): Promise<MemberResponseDto> {
+    return this.membersService.getGroupMember(groupId, id);
   }
 
   @UseGuards(CustomJwtAuthGuard)

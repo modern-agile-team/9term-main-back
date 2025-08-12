@@ -47,20 +47,6 @@ export class MemberRepository {
     });
   }
 
-  async createMember(data: {
-    groupId: number;
-    userId: number;
-    role: UserGroupRole;
-    status: MembershipStatus;
-  }) {
-    return this.prisma.userGroup.create({
-      data,
-      include: {
-        user: true,
-      },
-    });
-  }
-
   async upsertMember(data: {
     groupId: number;
     userId: number;
