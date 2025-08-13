@@ -16,6 +16,7 @@ import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interfa
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { MemberSwagger, ApiMembers } from './member.swagger';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { User } from '../auth/user.decorator';
@@ -74,11 +75,31 @@ export class MembersController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) userId: number,
     @Body() updateStatusDto: UpdateMemberStatusDto,
+    @User() user: AuthenticatedUser,
   ): Promise<{ message: string; member: MemberResponseDto }> {
     return this.membersService.updateMemberStatus(
       groupId,
       userId,
       updateStatusDto.action,
+      user.userId,
+    );
+  }
+
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @Post(':id/role')
+  @ApiBearerAuth('access-token')
+  @ApiMembers.updateRole()
+  async updateMemberRole(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) targetUserId: number,
+    @Body() dto: UpdateMemberRoleDto,
+    @User() user: AuthenticatedUser,
+  ): Promise<{ message: string; member: MemberResponseDto }> {
+    return this.membersService.updateMemberRole(
+      groupId,
+      user.userId,
+      targetUserId,
+      dto,
     );
   }
 }

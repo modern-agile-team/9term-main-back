@@ -95,4 +95,14 @@ export class MemberRepository {
       },
     });
   }
+
+  async countManagers(groupId: number): Promise<number> {
+    return this.prisma.userGroup.count({
+      where: {
+        groupId,
+        role: UserGroupRole.MANAGER,
+        status: MembershipStatus.APPROVED,
+      },
+    });
+  }
 }

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { MemberRepository } from './member.repository';
 import { GroupsRepository } from '../groups/groups.repository';
@@ -10,6 +11,7 @@ import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
 import { MembershipStatus, UserGroupRole } from '@prisma/client';
 import { MemberAction } from './member-action.enum';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import {
   toMemberResponseDto,
   toMemberResponseList,
@@ -95,6 +97,11 @@ export class MembersService {
       userId,
       role: UserGroupRole.MEMBER,
       status,
+      leftAt:
+        existingMembership &&
+        existingMembership.status === MembershipStatus.LEFT
+          ? null
+          : undefined,
     });
 
     return {
@@ -105,20 +112,24 @@ export class MembersService {
 
   async updateMemberStatus(
     groupId: number,
-    userId: number,
+    targetUserId: number,
     action: MemberAction,
+    actorUserId: number,
   ): Promise<{ message: string; member: MemberResponseDto }> {
     switch (action) {
       case MemberAction.APPROVE: {
-        const member = await this.approveMembership(groupId, userId);
+        const member = await this.approveMembership(groupId, targetUserId);
         return { message: '가입 신청이 승인되었습니다.', member };
       }
       case MemberAction.REJECT: {
-        const member = await this.rejectMembership(groupId, userId);
+        const member = await this.rejectMembership(groupId, targetUserId);
         return { message: '가입 신청이 거절되었습니다.', member };
       }
       case MemberAction.LEFT: {
-        return this.leaveGroup(groupId, userId);
+        if (actorUserId !== targetUserId) {
+          throw new ForbiddenException('본인만 탈퇴할 수 있습니다.');
+        }
+        return this.leaveGroup(groupId, targetUserId);
       }
       default: {
         throw new BadRequestException('올바르지 않은 액션입니다.');
@@ -199,5 +210,45 @@ export class MembersService {
     );
 
     return toMemberResponseDto(updatedMember);
+  }
+
+  async updateMemberRole(
+    groupId: number,
+    userId: number,
+    targetUserId: number,
+    { role }: UpdateMemberRoleDto,
+  ): Promise<{ message: string; member: MemberResponseDto }> {
+    if (userId === targetUserId) {
+      throw new BadRequestException(
+        '자기 자신의 역할은 이 API로 변경할 수 없습니다.',
+      );
+    }
+
+    const member = await this.getExistingMemberOrThrow(groupId, targetUserId);
+    if (member.status !== MembershipStatus.APPROVED) {
+      throw new BadRequestException('승인된 멤버만 역할을 변경할 수 있습니다.');
+    }
+
+    if (
+      member.role === UserGroupRole.MANAGER &&
+      role === UserGroupRole.MEMBER
+    ) {
+      const managerCount = await this.memberRepository.countManagers(groupId);
+      if (managerCount <= 1) {
+        throw new ConflictException(
+          '마지막 매니저의 역할은 변경할 수 없습니다.',
+        );
+      }
+    }
+
+    const updated = await this.memberRepository.updateMembershipStatus(
+      groupId,
+      targetUserId,
+      { role },
+    );
+    return {
+      message: '역할이 변경되었습니다.',
+      member: toMemberResponseDto(updated),
+    };
   }
 }

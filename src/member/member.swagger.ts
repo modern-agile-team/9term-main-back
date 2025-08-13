@@ -11,6 +11,7 @@ import {
 import { MemberResponseDto } from './dto/member-response.dto';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { MemberAction } from './member-action.enum';
 
 const unauthorizedResponse = () =>
@@ -221,6 +222,34 @@ export const ApiMembers = {
       unauthorizedResponse(),
       forbiddenResponse('권한이 없습니다.'),
       conflictResponse('처리할 수 없는 요청입니다.'),
+    ),
+  updateRole: () =>
+    applyDecorators(
+      ApiOperation({ summary: '멤버 역할 변경 (매니저 전용)' }),
+      ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
+      ApiParam({
+        name: 'id',
+        type: Number,
+        description: '대상 멤버의 사용자 ID',
+      }),
+      ApiBody({
+        type: UpdateMemberRoleDto,
+        examples: {
+          promote: {
+            summary: '멤버 → 매니저 승격',
+            value: { role: 'MANAGER' },
+          },
+          demote: { summary: '매니저 → 멤버 강등', value: { role: 'MEMBER' } },
+        },
+      }),
+      ApiResponseWithData(Object, 200, '역할 변경 성공', {
+        message: '역할이 변경되었습니다.',
+        member: {},
+      }),
+      unauthorizedResponse(),
+      forbiddenResponse('권한이 없습니다.'),
+      conflictResponse('마지막 매니저의 역할은 변경할 수 없습니다.'),
+      badRequestResponse(),
     ),
 };
 export function MemberSwagger() {
