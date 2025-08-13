@@ -4,13 +4,13 @@ import {
   Post,
   Body,
   Param,
-  Req,
   UseGuards,
   ParseIntPipe,
   Patch,
   UseInterceptors,
   UploadedFile,
   Put,
+  Delete,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
@@ -21,15 +21,11 @@ import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
-import { Request } from 'express';
-import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { ApiGroups } from './group.swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUserResponse;
-}
+import { User } from 'src/auth/user.decorator';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @ApiTags('Groups')
 @Controller('groups')
@@ -44,13 +40,11 @@ export class GroupsController {
   async createGroup(
     @Body() createGroupDto: CreateGroupDto,
     @UploadedFile() uploadFile: Express.Multer.File,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<{ status: string; message: string; data: GroupResponseDto }> {
-    const userId = req.user.userId;
-
     const createdGroup = await this.groupsService.createGroup(
       createGroupDto,
-      userId,
+      user.userId,
       uploadFile,
     );
 
@@ -81,16 +75,15 @@ export class GroupsController {
   @ApiGroups.getOne()
   async findGroupWithJoinStatus(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<{
     status: string;
     message: string;
     data: GroupJoinStatusDto;
   }> {
-    const userId = req.user?.userId;
     const groupData = await this.groupsService.getGroupWithJoinStatus(
       groupId,
-      userId,
+      user.userId,
     );
 
     return {
@@ -107,12 +100,11 @@ export class GroupsController {
   async updateGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() updateGroupDto: UpdateGroupDto,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<{ status: string; message: string; data: GroupResponseDto }> {
-    const userId = req.user.userId;
     const updatedGroup = await this.groupsService.updateGroup(
       groupId,
-      userId,
+      user.userId,
       updateGroupDto,
     );
 
@@ -130,13 +122,11 @@ export class GroupsController {
   async updateGroupImage(
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile: Express.Multer.File,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<GroupResponseDto>> {
-    const userId = req.user.userId;
-
     const updatedGroup = await this.groupsService.upsertGroupImage(
       groupId,
-      userId,
+      user.userId,
       uploadFile,
     );
 
@@ -144,6 +134,22 @@ export class GroupsController {
       status: 'success',
       message: '그룹 이미지가 성공적으로 변경되었습니다.',
       data: updatedGroup,
+    };
+  }
+
+  @Delete(':groupId')
+  @UseGuards(CustomJwtAuthGuard)
+  @ApiBearerAuth()
+  async removeGroup(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @User() user: AuthenticatedUser,
+  ): Promise<ApiResponseDto<null>> {
+    await this.groupsService.removeGroup(groupId, user.userId);
+
+    return {
+      status: 'success',
+      message: '그룹이 성공적으로 삭제되었습니다.',
+      data: null,
     };
   }
 }
