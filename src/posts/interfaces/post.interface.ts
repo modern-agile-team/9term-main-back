@@ -10,11 +10,15 @@ export interface Post {
   updatedAt: Date | null;
   category: PostCategory;
 }
+
 export interface PostWithUser extends Post {
   user: {
     id: number;
     name: string;
   };
+}
+export interface PostImageLite {
+  postImgPath: string;
 }
 
 export interface PostWithUserAndCountRaw extends PostWithUser {
@@ -22,7 +26,7 @@ export interface PostWithUserAndCountRaw extends PostWithUser {
     comments: number;
     postLikes: number;
   };
-  postImages: PostImage[];
+  postImages: PostImageLite[];
 }
 
 export interface PostSummary extends PostWithUser {

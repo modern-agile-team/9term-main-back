@@ -17,26 +17,28 @@ export class PostsRepository {
     data: CreatePostData,
     postImagePath?: string,
   ): Promise<Post> {
-    return await this.prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const createdPost = await tx.post.create({ data });
+    return await this.prisma.$transaction(async (tx) => {
+      const createdPost = await tx.post.create({ data });
 
-        if (postImagePath) {
-          await tx.postImage.create({
-            data: {
-              postId: createdPost.id,
-              postImgPath: postImagePath,
-            },
-          });
-        }
+      if (postImagePath) {
+        await tx.postImage.create({
+          data: {
+            postId: createdPost.id,
+            postImgPath: postImagePath,
+          },
+        });
+      }
 
-        return createdPost;
-      },
-    );
+      return createdPost;
+    });
   }
 
-  async updatePost(id: number, data: UpdatePostData): Promise<Post> {
-    return await this.prisma.post.update({
+  async updatePost(
+    id: number,
+    data: UpdatePostData,
+    tx?: TxClient,
+  ): Promise<Post> {
+    return await (tx ?? this.prisma).post.update({
       where: { id },
       data: {
         ...data,
@@ -45,8 +47,8 @@ export class PostsRepository {
     });
   }
 
-  async deletePost(id: number): Promise<void> {
-    await this.prisma.post.delete({ where: { id } });
+  async deletePost(id: number, tx?: TxClient): Promise<void> {
+    await (tx ?? this.prisma).post.delete({ where: { id } });
   }
 
   async findPostsWithCommentsCount(
@@ -68,7 +70,9 @@ export class PostsRepository {
             postLikes: true,
           },
         },
-        postImages: true,
+        postImages: {
+          select: { postImgPath: true },
+        },
       },
     });
   }
@@ -92,7 +96,9 @@ export class PostsRepository {
             postLikes: true,
           },
         },
-        postImages: true,
+        postImages: {
+          select: { postImgPath: true },
+        },
       },
     });
   }
