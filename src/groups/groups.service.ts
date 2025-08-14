@@ -216,18 +216,10 @@ export class GroupsService {
     });
   }
 
-  async removeGroup(groupId: number, userId: number): Promise<void> {
+  async removeGroup(groupId: number): Promise<void> {
     const group = await this.groupsRepository.findGroupById(groupId);
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
-
-    const membership = await this.groupsRepository.findGroupUser(
-      groupId,
-      userId,
-    );
-    if (!membership || membership.role !== UserGroupRole.MANAGER) {
-      throw new ForbiddenException('그룹을 삭제할 권한이 없습니다.');
     }
 
     await this.groupsRepository.deleteGroupById(groupId);

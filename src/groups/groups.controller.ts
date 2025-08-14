@@ -26,6 +26,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { User } from 'src/auth/user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { GroupManagerGuard } from 'src/member/guards/group-manager.guard';
 
 @ApiTags('Groups')
 @Controller('groups')
@@ -138,13 +139,12 @@ export class GroupsController {
   }
 
   @Delete(':groupId')
-  @UseGuards(CustomJwtAuthGuard)
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @ApiBearerAuth()
   async removeGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<null>> {
-    await this.groupsService.removeGroup(groupId, user.userId);
+    await this.groupsService.removeGroup(groupId);
 
     return {
       status: 'success',
