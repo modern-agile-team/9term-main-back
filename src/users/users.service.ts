@@ -14,11 +14,23 @@ import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService implements IUsersService {
+  private readonly defaultImageKey: string[];
+
   constructor(
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly usersRepository: UsersRepository,
-  ) {}
+  ) {
+    const defaultImagesString = this.configService.get<string>(
+      'DEFAULT_PROFILE_IMAGE_URL',
+    );
+    if (!defaultImagesString) {
+      throw new InternalServerErrorException(
+        '기본 프로필 이미지 URL 설정 오류',
+      );
+    }
+    this.defaultImageKey = defaultImagesString.split(',');
+  }
 
   // 사용자 찾기
   private async findUserOrThrow(userId: number): Promise<User> {
@@ -31,22 +43,13 @@ export class UsersService implements IUsersService {
 
   // 기본 이미지 URL 목록 가져오기
   private getDefaultImageKeys(): string[] {
-    const defaultImagesString = this.configService.get<string>(
-      'DEFAULT_PROFILE_IMAGE_URL',
-    );
-    if (!defaultImagesString) {
-      throw new InternalServerErrorException(
-        '기본 프로필 이미지 URL 설정 오류',
-      );
-    }
-    return defaultImagesString.split(',');
+    return this.defaultImageKey;
   }
 
   // 기본 이미지 중 랜덤으로 하나 선택
   private getRandomDefaultImageKey(): string {
-    const defaultKeys = this.getDefaultImageKeys();
-    const randomIndex = Math.floor(Math.random() * defaultKeys.length);
-    return defaultKeys[randomIndex];
+    const randomIndex = Math.floor(Math.random() * this.defaultImageKey.length);
+    return this.defaultImageKey[randomIndex];
   }
 
   // 프로필 이미지 키를 가져오고 URL로 변환
@@ -101,7 +104,7 @@ export class UsersService implements IUsersService {
     );
   }
 
-  async updateUserProfile(
+  async updateProfileImage(
     userId: number,
     profileImageFile: Express.Multer.File,
   ): Promise<UserProfileDto> {
@@ -126,8 +129,18 @@ export class UsersService implements IUsersService {
       if (previousKey) {
         await this.deletePreviousProfileImage(previousKey);
       }
+      const profileImgUrl = this.getProfileImageUrl(updatedUser);
 
-      return this.findMyProfile(updatedUser.id);
+      return plainToInstance(
+        UserProfileDto,
+        {
+          userId: updatedUser.id,
+          name: updatedUser.name,
+          username: updatedUser.username,
+          profileImgUrl: profileImgUrl,
+        },
+        { excludeExtraneousValues: true },
+      );
     } catch (error) {
       // 예외 발생 시, 업로드된 새 이미지 롤백(삭제)
       if (newProfileImgKey) {
@@ -141,7 +154,7 @@ export class UsersService implements IUsersService {
     }
   }
 
-  async deleteUserProfileImage(userId: number): Promise<UserProfileDto> {
+  async deleteProfileImage(userId: number): Promise<UserProfileDto> {
     const user = await this.findUserOrThrow(userId);
     const previousKey = user.profileImgPath;
     const defaultImageKey = this.getRandomDefaultImageKey();
@@ -154,6 +167,17 @@ export class UsersService implements IUsersService {
       await this.deletePreviousProfileImage(previousKey);
     }
 
-    return this.findMyProfile(updatedUser.id);
+    const profileImgUrl = this.getProfileImageUrl(updatedUser);
+
+    return plainToInstance(
+      UserProfileDto,
+      {
+        userId: updatedUser.id,
+        name: updatedUser.name,
+        username: updatedUser.username,
+        profileImgUrl: profileImgUrl,
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 }

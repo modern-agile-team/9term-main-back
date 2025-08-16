@@ -51,7 +51,7 @@ export class UsersController {
       );
     }
 
-    const updatedUser = await this.usersService.updateUserProfile(
+    const updatedUser = await this.usersService.updateProfileImage(
       userId,
       profileImage,
     );
@@ -69,7 +69,7 @@ export class UsersController {
   ): Promise<ApiResponseDto<UserProfileDto>> {
     const userId = user.userId;
 
-    const updatedUser = await this.usersService.deleteUserProfileImage(userId);
+    const updatedUser = await this.usersService.deleteProfileImage(userId);
 
     return {
       status: 'success',
