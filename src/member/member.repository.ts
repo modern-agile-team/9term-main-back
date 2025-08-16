@@ -47,28 +47,12 @@ export class MemberRepository {
     });
   }
 
-  async createMember(data: {
-    groupId: number;
-    userId: number;
-    role: UserGroupRole;
-    status?: MembershipStatus;
-  }) {
-    return this.prisma.userGroup.create({
-      data: {
-        ...data,
-        status: data.status ?? MembershipStatus.APPROVED,
-      },
-      include: {
-        user: true,
-      },
-    });
-  }
-
   async upsertMember(data: {
     groupId: number;
     userId: number;
     role: UserGroupRole;
     status: MembershipStatus;
+    leftAt?: Date | null;
   }) {
     return this.prisma.userGroup.upsert({
       where: {
@@ -80,11 +64,9 @@ export class MemberRepository {
       update: {
         role: data.role,
         status: data.status,
-        leftAt: null,
+        ...(data.leftAt !== undefined ? { leftAt: data.leftAt } : {}),
       },
-      create: {
-        ...data,
-      },
+      create: data,
       include: {
         user: true,
       },
@@ -111,23 +93,6 @@ export class MemberRepository {
       include: {
         user: true,
       },
-    });
-  }
-
-  async updateMembershipStatusWithLeftAt(
-    groupId: number,
-    userId: number,
-    status: MembershipStatus,
-  ) {
-    return this.updateMembershipStatus(groupId, userId, {
-      status,
-      leftAt: status === MembershipStatus.LEFT ? new Date() : null,
-    });
-  }
-
-  async deleteManyByGroupAndUser(groupId: number, userId: number) {
-    return this.prisma.userGroup.deleteMany({
-      where: { groupId, userId },
     });
   }
 }

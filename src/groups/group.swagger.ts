@@ -10,6 +10,7 @@ import { GroupJoinStatusDto } from './dto/group-join-status.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupUserResponseDto } from './dto/group-user-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
+import { UserGroupRole } from '@prisma/client';
 
 const unauthorizedResponse = () =>
   ApiResponse({
@@ -184,7 +185,7 @@ export const ApiGroups = {
           message: '그룹 ID 2의 정보를 성공적으로 가져왔습니다.',
           data: {
             isJoined: true,
-            role: 'MANAGER',
+            role: UserGroupRole.MANAGER,
           },
         },
       ),
