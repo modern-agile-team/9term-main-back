@@ -16,6 +16,7 @@ import { CustomJwtAuthGuard } from '../auth/guards/access.guard';
 import { AuthenticatedUserResponse } from '../auth/interfaces/authenticated-user-response.interface';
 import { UserProfileDto } from './dto/responses/user-profile.dto';
 import { UsersService } from './users.service';
+import { ApiUsers } from './users.swagger';
 
 @ApiTags('Users')
 @Controller('users')
@@ -25,6 +26,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
+  @ApiUsers.getProfile()
   async getProfile(
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
@@ -39,6 +41,7 @@ export class UsersController {
 
   @Patch('me/profile-image')
   @UseInterceptors(FileInterceptor('profileImage'))
+  @ApiUsers.updateProfileImage()
   async updateMyProfile(
     @UploadedFile() profileImage: Express.Multer.File,
     @User() user: AuthenticatedUserResponse,
@@ -64,6 +67,7 @@ export class UsersController {
   }
 
   @Delete('me/profile-image')
+  @ApiUsers.deleteProfileImage()
   async deleteMyProfileImage(
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
