@@ -32,20 +32,13 @@ const notFoundExamples = {
   },
 };
 
-// 래핑 함수
-const withUnauthorizedResponses = () =>
-  unauthorizedResponses(unauthorizedExamples);
-
-const withNotFoundResponses = (keys: (keyof typeof notFoundExamples)[]) =>
-  NotFoundResponses(
-    keys.reduce(
-      (obj, key) => {
-        obj[key] = notFoundExamples[key];
-        return obj;
-      },
-      {} as Record<string, any>,
-    ),
-  );
+const badRequestExamples = {
+  FileRequired: {
+    message: '프로필 이미지를 업데이트하려면 파일이 필요합니다.',
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+};
 
 // 성공 응답
 const ApiResponseWithData = <T extends Type<any>>(
@@ -70,17 +63,27 @@ const ApiResponseWithData = <T extends Type<any>>(
 };
 
 // 클라이언트 요청 오류 응답
-const badRequestResponse = () =>
+const badRequestResponses = (examples: {
+  [key: string]: { message: string; error: string; statusCode: number };
+}) =>
   ApiResponse({
     status: 400,
     description: '잘못된 요청 데이터',
     content: {
       'application/json': {
-        example: {
-          message: '프로필 이미지를 업데이트하려면 파일이 필요합니다.',
-          error: 'Bad Request',
-          statusCode: 400,
-        },
+        examples: Object.entries(examples).reduce(
+          (acc, [name, exValue]) => {
+            acc[name] = {
+              value: {
+                message: exValue.message,
+                error: exValue.error,
+                statusCode: exValue.statusCode,
+              },
+            };
+            return acc;
+          },
+          {} as { [key: string]: { value: any } },
+        ),
       },
     },
   });
@@ -111,7 +114,7 @@ const unauthorizedResponses = (examples: {
   });
 
 // 리소스 없음
-const NotFoundResponses = (examples: {
+const notFoundResponses = (examples: {
   [key: string]: { message: string; error: string; statusCode: number };
 }) =>
   ApiResponse({
@@ -144,8 +147,8 @@ export const ApiUsers = {
         description: '로그인한 유저의 프로필 정보를 조회합니다.',
       }),
       ApiResponseWithData(UserProfileDto, 200, '내 정보 조회 성공'),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['UserNotFound']),
+      unauthorizedResponses(unauthorizedExamples),
+      notFoundResponses(notFoundExamples),
     ),
 
   updateProfileImage: () =>
@@ -171,9 +174,9 @@ export const ApiUsers = {
         200,
         '프로필 이미지가 성공적으로 업데이트되었습니다.',
       ),
-      badRequestResponse(),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['UserNotFound']),
+      badRequestResponses(badRequestExamples),
+      unauthorizedResponses(unauthorizedExamples),
+      notFoundResponses(notFoundExamples),
     ),
 
   deleteProfileImage: () =>
@@ -187,7 +190,7 @@ export const ApiUsers = {
         200,
         '프로필 이미지가 기본 이미지로 변경되었습니다.',
       ),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['UserNotFound']),
+      unauthorizedResponses(unauthorizedExamples),
+      notFoundResponses(notFoundExamples),
     ),
 };
