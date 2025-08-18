@@ -1,5 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { UserGroupRole } from '@prisma/client';
 
 const UnauthorizedExamples = () =>
@@ -130,6 +135,25 @@ export const ApiGroups = {
       ApiOperation({
         summary: '그룹 생성',
         description: '새로운 그룹을 생성합니다.',
+      }),
+      ApiConsumes('multipart/form-data'),
+      ApiBody({
+        schema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: '프론트엔드 스터디' },
+            description: {
+              type: 'string',
+              example: 'React와 TypeScript를 공부하는 모임입니다.',
+            },
+            groupImage: {
+              type: 'string',
+              format: 'binary',
+              description: '업로드할 이미지 파일(선택)',
+            },
+          },
+          required: ['name'],
+        },
       }),
       ApiResponse({
         status: 201,
@@ -273,11 +297,25 @@ export const ApiGroups = {
         summary: '그룹 이미지 변경',
         description: '그룹 이미지를 변경/삭제합니다.',
       }),
+      ApiConsumes('multipart/form-data'),
+      ApiBody({
+        schema: {
+          type: 'object',
+          properties: {
+            groupImage: {
+              type: 'string',
+              format: 'binary',
+              description: '업로드할 이미지 파일',
+            },
+          },
+          required: ['groupImage'],
+        },
+      }),
       ApiResponse({
         status: 200,
         description: '그룹 이미지 변경 성공',
         content: {
-          'aplication/json': {
+          'application/json': {
             example: {
               status: `success`,
               message: '그룹 이미지가 성공적으로 변경되었습니다.',
@@ -307,7 +345,7 @@ export const ApiGroups = {
         status: 200,
         description: '그룹 삭제 성공',
         content: {
-          'appliction/json': {
+          'application/json': {
             example: {
               status: 'success',
               message: '그룹이 성공적으로 삭제되었습니다.',
