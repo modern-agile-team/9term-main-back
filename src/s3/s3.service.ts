@@ -1,14 +1,14 @@
 import {
-  S3Client,
-  type S3ClientConfig,
-  PutObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
-  type PutObjectCommandInput,
+  PutObjectCommand,
+  S3Client,
   type DeleteObjectCommandInput,
-  type ObjectIdentifier,
   type ListObjectsV2CommandOutput,
+  type ObjectIdentifier,
+  type PutObjectCommandInput,
+  type S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -23,7 +23,7 @@ export class S3Service {
   private readonly regionName: string;
 
   private readonly folderMap: Record<S3ObjectType, string> = {
-    [S3ObjectType.PROFILE]: 'profile/',
+    [S3ObjectType.PROFILE]: 'profile/user_uploads/',
     [S3ObjectType.GROUP]: 'group/',
     [S3ObjectType.POST]: 'post/',
   };
