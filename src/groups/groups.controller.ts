@@ -73,6 +73,7 @@ export class GroupsController {
 
   @Get(':groupId')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @ApiGroups.getOne()
   async findGroupWithJoinStatus(
     @Param('groupId', ParseIntPipe) groupId: number,
@@ -120,6 +121,7 @@ export class GroupsController {
   @UseGuards(CustomJwtAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('groupImage'))
+  @ApiGroups.updateImage()
   async updateGroupImage(
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile: Express.Multer.File,
@@ -141,6 +143,7 @@ export class GroupsController {
   @Delete(':groupId')
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @ApiBearerAuth()
+  @ApiGroups.remove()
   async removeGroup(
     @Param('groupId', ParseIntPipe) groupId: number,
   ): Promise<ApiResponseDto<null>> {
