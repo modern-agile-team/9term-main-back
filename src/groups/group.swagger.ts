@@ -7,7 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { UserGroupRole } from '@prisma/client';
 
-const UnauthorizedExamples = () =>
+const unauthorizedExamples = () =>
   ApiResponse({
     status: 401,
     description: '인증되지 않은 사용자',
@@ -33,7 +33,7 @@ const UnauthorizedExamples = () =>
     },
   });
 
-const BadRequestExamples = () =>
+const badRequestExamples = () =>
   ApiResponse({
     status: 400,
     description: '잘못된 요청',
@@ -59,7 +59,7 @@ const BadRequestExamples = () =>
     },
   });
 
-const NotFoundExamples = (
+const notFoundExamples = (
   targets: Array<'Group' | 'User' | 'Membership'> = ['Group'],
 ) =>
   ApiResponse({
@@ -103,7 +103,7 @@ const NotFoundExamples = (
     },
   });
 
-const ConflictExamples = () =>
+const conflictExamples = () =>
   ApiResponse({
     status: 409,
     description: '중복 리소스',
@@ -173,9 +173,9 @@ export const ApiGroups = {
           },
         },
       }),
-      BadRequestExamples(),
-      ConflictExamples(),
-      UnauthorizedExamples(),
+      badRequestExamples(),
+      conflictExamples(),
+      unauthorizedExamples(),
     ),
 
   getAll: () =>
@@ -221,7 +221,7 @@ export const ApiGroups = {
           'application/json': {
             example: {
               status: 'success',
-              message: '그룹 ID 2의 정보를 성공적으로 가져왔습니다.',
+              message: '그룹 정보를 성공적으로 가져왔습니다.',
               data: {
                 isJoined: true,
                 role: UserGroupRole.MANAGER,
@@ -230,7 +230,7 @@ export const ApiGroups = {
           },
         },
       }),
-      NotFoundExamples(['Group']),
+      notFoundExamples(['Group']),
     ),
 
   join: () =>
@@ -256,10 +256,10 @@ export const ApiGroups = {
           },
         },
       }),
-      BadRequestExamples(),
-      ConflictExamples(),
-      NotFoundExamples(['Group', 'User']),
-      UnauthorizedExamples(),
+      badRequestExamples(),
+      conflictExamples(),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
     ),
 
   update: () =>
@@ -286,9 +286,9 @@ export const ApiGroups = {
           },
         },
       }),
-      BadRequestExamples(),
-      NotFoundExamples(['Group']),
-      UnauthorizedExamples(),
+      badRequestExamples(),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
     ),
 
   updateImage: () =>
@@ -331,8 +331,8 @@ export const ApiGroups = {
           },
         },
       }),
-      NotFoundExamples(['Group']),
-      UnauthorizedExamples(),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
     ),
 
   remove: () =>
@@ -354,7 +354,7 @@ export const ApiGroups = {
           },
         },
       }),
-      NotFoundExamples(['Group']),
-      UnauthorizedExamples(),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
     ),
 };
