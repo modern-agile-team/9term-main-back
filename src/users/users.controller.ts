@@ -39,7 +39,7 @@ export class UsersController {
     };
   }
 
-  @Patch('me/profile-image')
+  @Patch('me/image')
   @UseInterceptors(FileInterceptor('profileImage'))
   @ApiUsers.updateProfileImage()
   async updateMyProfile(
@@ -66,7 +66,7 @@ export class UsersController {
     };
   }
 
-  @Delete('me/profile-image')
+  @Delete('me/image')
   @ApiUsers.deleteProfileImage()
   async deleteMyProfileImage(
     @User() user: AuthenticatedUserResponse,
