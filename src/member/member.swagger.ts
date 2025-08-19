@@ -9,6 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { MemberResponseDto } from './dto/member-response.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
@@ -103,19 +104,34 @@ const internalServerErrorResponse = (message = '유저 정보가 없습니다.')
     },
   });
 
+type ApiResponseExample = {
+  status: 'success';
+  message?: string;
+  data?: unknown;
+};
+
 function ApiResponseWithData<T>(
   model: Type<T>,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
-  example?: any,
+  example?: ApiResponseExample,
 ) {
   return applyDecorators(
-    ApiExtraModels(model),
+    ApiExtraModels(model, ApiResponseDto),
     ApiResponse({
       status,
       description,
       schema: {
-        allOf: [{ $ref: getSchemaPath(model) }],
+        allOf: [
+          { $ref: getSchemaPath(ApiResponseDto) },
+          {
+            properties: {
+              status: { type: 'string', example: 'success' },
+              message: { type: 'string', example: example?.message },
+              data: { $ref: getSchemaPath(model) },
+            },
+          },
+        ],
         ...(example ? { example } : {}),
       },
     }),
@@ -126,16 +142,26 @@ function ApiArrayResponseWithData<T>(
   model: Type<T>,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
-  example?: any,
+  example?: ApiResponseExample,
 ) {
   return applyDecorators(
-    ApiExtraModels(model),
+    ApiExtraModels(model, ApiResponseDto),
     ApiResponse({
       status,
       description,
       schema: {
-        type: 'array',
-        items: { $ref: getSchemaPath(model) },
+        allOf: [
+          { $ref: getSchemaPath(ApiResponseDto) },
+          {
+            properties: {
+              status: { type: 'string', example: 'success' },
+              data: {
+                type: 'array',
+                items: { $ref: getSchemaPath(model) },
+              },
+            },
+          },
+        ],
         ...(example ? { example } : {}),
       },
     }),
@@ -147,7 +173,11 @@ export const ApiMembers = {
     applyDecorators(
       ApiOperation({ summary: '그룹 멤버 목록 조회' }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
-      ApiArrayResponseWithData(MemberResponseDto, 200, '멤버 목록 조회 성공'),
+      ApiArrayResponseWithData(MemberResponseDto, 200, '멤버 목록 조회 성공', {
+        status: 'success',
+        message: '멤버 목록이 성공적으로 조회되었습니다.',
+        data: [],
+      }),
       unauthorizedResponse(),
       notFoundResponse('해당 그룹을 찾을 수 없습니다.'),
       internalServerErrorResponse('유저 정보가 없습니다.'),
@@ -158,7 +188,11 @@ export const ApiMembers = {
       ApiOperation({ summary: '그룹 내 특정 멤버 조회' }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
       ApiParam({ name: 'id', type: Number, description: '멤버 PK(ID)' }),
-      ApiResponseWithData(MemberResponseDto, 200, '멤버 조회 성공'),
+      ApiResponseWithData(MemberResponseDto, 200, '멤버 조회 성공', {
+        status: 'success',
+        message: '멤버가 성공적으로 조회되었습니다.',
+        data: {},
+      }),
       notFoundResponse('그룹 멤버가 존재하지 않습니다.'),
       unauthorizedResponse(),
     ),
@@ -172,11 +206,10 @@ export const ApiMembers = {
       }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
       ApiBody({ type: JoinMemberRequestDto }),
-      ApiResponseWithData(Object, 201, '그룹 가입 신청 성공', {
+      ApiResponseWithData(MemberResponseDto, 201, '그룹 가입 신청 성공', {
+        status: 'success',
         message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
-        member: {
-          /* MemberResponseDto 구조 */
-        },
+        data: {},
       }),
       conflictResponse('이미 신청 중이거나 가입된 그룹입니다.'),
       badRequestResponse(),
@@ -213,11 +246,10 @@ export const ApiMembers = {
           },
         },
       }),
-      ApiResponseWithData(Object, 200, '상태 변경 성공', {
+      ApiResponseWithData(MemberResponseDto, 200, '상태 변경 성공', {
+        status: 'success',
         message: '작업이 성공적으로 완료되었습니다.',
-        member: {
-          /* MemberResponseDto 구조 */
-        },
+        data: {},
       }),
       unauthorizedResponse(),
       forbiddenResponse('권한이 없습니다.'),
@@ -242,14 +274,26 @@ export const ApiMembers = {
           demote: { summary: '매니저 → 멤버 강등', value: { role: 'MEMBER' } },
         },
       }),
-      ApiResponseWithData(Object, 200, '역할 변경 성공', {
+      ApiResponseWithData(MemberResponseDto, 200, '역할 변경 성공', {
+        status: 'success',
         message: '역할이 변경되었습니다.',
-        member: {},
+        data: {},
       }),
-      unauthorizedResponse(),
-      forbiddenResponse('권한이 없습니다.'),
+      forbiddenResponse('자기 자신의 역할 변경은 허용되지 않습니다.'),
       conflictResponse('마지막 매니저의 역할은 변경할 수 없습니다.'),
       badRequestResponse(),
+    ),
+  leaveSelf: () =>
+    applyDecorators(
+      ApiOperation({ summary: '그룹 탈퇴 (본인 전용)' }),
+      ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
+      ApiResponseWithData(MemberResponseDto, 200, '탈퇴 성공', {
+        status: 'success',
+        message: '그룹을 탈퇴했습니다.',
+        data: {},
+      }),
+      unauthorizedResponse(),
+      forbiddenResponse('승인된 멤버만 접근할 수 있습니다.'),
     ),
 };
 export function MemberSwagger() {

@@ -75,7 +75,7 @@ export class MembersService {
 
   async joinGroup(
     dto: JoinMemberRequestDto & { userId: number },
-  ): Promise<{ message: string; member: MemberResponseDto }> {
+  ): Promise<MemberResponseDto> {
     const { groupId, userId, status = MembershipStatus.PENDING } = dto;
     await this.ensureGroupExists(groupId);
 
@@ -104,10 +104,7 @@ export class MembersService {
           : undefined,
     });
 
-    return {
-      message: '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
-      member: toMemberResponseDto(newMember),
-    };
+    return toMemberResponseDto(newMember);
   }
 
   async updateMemberStatus(
@@ -115,15 +112,15 @@ export class MembersService {
     targetUserId: number,
     action: MemberAction,
     actorUserId: number,
-  ): Promise<{ message: string; member: MemberResponseDto }> {
+  ): Promise<MemberResponseDto> {
     switch (action) {
       case MemberAction.APPROVE: {
         const member = await this.approveMembership(groupId, targetUserId);
-        return { message: '가입 신청이 승인되었습니다.', member };
+        return member;
       }
       case MemberAction.REJECT: {
         const member = await this.rejectMembership(groupId, targetUserId);
-        return { message: '가입 신청이 거절되었습니다.', member };
+        return member;
       }
       case MemberAction.LEFT: {
         if (actorUserId !== targetUserId) {
@@ -140,7 +137,7 @@ export class MembersService {
   async leaveGroup(
     groupId: number,
     userId: number,
-  ): Promise<{ message: string; member: MemberResponseDto }> {
+  ): Promise<MemberResponseDto> {
     const member = await this.getExistingMemberOrThrow(groupId, userId);
 
     if (member.status !== MembershipStatus.APPROVED) {
@@ -160,10 +157,7 @@ export class MembersService {
       },
     );
 
-    return {
-      message: '그룹을 탈퇴했습니다.',
-      member: toMemberResponseDto(updatedMember),
-    };
+    return toMemberResponseDto(updatedMember);
   }
 
   async approveMembership(
@@ -217,16 +211,16 @@ export class MembersService {
     userId: number,
     targetUserId: number,
     { role }: UpdateMemberRoleDto,
-  ): Promise<{ message: string; member: MemberResponseDto }> {
+  ): Promise<MemberResponseDto> {
     if (userId === targetUserId) {
-      throw new BadRequestException(
+      throw new ForbiddenException(
         '자기 자신의 역할은 이 API로 변경할 수 없습니다.',
       );
     }
 
     const member = await this.getExistingMemberOrThrow(groupId, targetUserId);
     if (member.status !== MembershipStatus.APPROVED) {
-      throw new BadRequestException('승인된 멤버만 역할을 변경할 수 있습니다.');
+      throw new ForbiddenException('승인된 멤버만 역할을 변경할 수 있습니다.');
     }
 
     if (
@@ -246,9 +240,6 @@ export class MembersService {
       targetUserId,
       { role },
     );
-    return {
-      message: '역할이 변경되었습니다.',
-      member: toMemberResponseDto(updated),
-    };
+    return toMemberResponseDto(updated);
   }
 }
