@@ -50,21 +50,6 @@ export class MembersService {
     return toMemberResponseList(members);
   }
 
-  async getMembersByGroupWithStatusString(
-    groupId: number,
-    status?: string,
-  ): Promise<MemberResponseDto[]> {
-    if (!status) {
-      return this.getMembersByGroup(groupId);
-    }
-    const statusEnum =
-      MembershipStatus[status as keyof typeof MembershipStatus];
-    if (!statusEnum) {
-      throw new BadRequestException(`유효하지 않은 status 값입니다: ${status}`);
-    }
-    return this.getMembersByGroup(groupId, statusEnum);
-  }
-
   async getGroupMember(
     groupId: number,
     userId: number,
