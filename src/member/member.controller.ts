@@ -6,6 +6,7 @@ import {
   UseGuards,
   Post,
   Body,
+  Query,
 } from '@nestjs/common';
 import { MembersService } from './member.service';
 import { GroupMemberGuard } from './guards/group-member.guard';
@@ -34,8 +35,12 @@ export class MembersController {
   @ApiMembers.getList()
   async getMemberList(
     @Param('groupId', ParseIntPipe) groupId: number,
+    @Query('status') status?: string,
   ): Promise<ApiResponseDto<MemberResponseDto[]>> {
-    const data = await this.membersService.getMembersByGroup(groupId);
+    const data = await this.membersService.getMembersByGroupWithStatusString(
+      groupId,
+      status,
+    );
     return {
       status: 'success',
       message: '멤버 목록이 성공적으로 조회되었습니다.',
