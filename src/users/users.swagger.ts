@@ -4,10 +4,13 @@ import {
   ApiConsumes,
   ApiExtraModels,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { UserProfileDto } from './dto/responses/user-profile.dto';
+import { UserGroupSummaryDto } from './dto/responses/user-group-summary.dto';
+import { MembershipStatus } from '@prisma/client';
 
 // 공통 Unauthorized
 const unauthorizedExamples = {
@@ -56,6 +59,31 @@ const ApiResponseWithData = <T extends Type<any>>(
           status: { type: 'string', example: 'success' },
           message: { type: 'string', example: description },
           data: { $ref: getSchemaPath(model) },
+        },
+      },
+    }),
+  );
+};
+
+// 배열 데이터 응답
+const ApiArrayResponseWithData = <T extends Type<any>>(
+  model: T,
+  status = 200,
+  description = '요청이 성공적으로 처리되었습니다.',
+) => {
+  return applyDecorators(
+    ApiExtraModels(model),
+    ApiResponse({
+      status,
+      description,
+      schema: {
+        properties: {
+          status: { type: 'string', example: 'success' },
+          message: { type: 'string', example: description },
+          data: {
+            type: 'array',
+            items: { $ref: getSchemaPath(model) },
+          },
         },
       },
     }),
@@ -192,5 +220,26 @@ export const ApiUsers = {
       ),
       unauthorizedResponses(unauthorizedExamples),
       notFoundResponses(notFoundExamples),
+    ),
+
+  getMyGroups: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '내 그룹 목록 조회',
+        description:
+          '로그인한 유저가 속한 그룹 목록을 조회합니다. status 쿼리로 멤버십 상태를 필터링할 수 있습니다.',
+      }),
+      ApiQuery({
+        name: 'status',
+        required: false,
+        enum: MembershipStatus,
+        description: '멤버십 상태 필터 (PENDING | APPROVED)',
+      }),
+      ApiArrayResponseWithData(
+        UserGroupSummaryDto,
+        200,
+        '내 그룹 목록 조회 성공',
+      ),
+      unauthorizedResponses(unauthorizedExamples),
     ),
 };

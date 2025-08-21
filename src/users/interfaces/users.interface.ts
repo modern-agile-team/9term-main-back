@@ -10,6 +10,7 @@ export interface IUsersRepository {
 export interface IUsersService {
   createUser(userData: CreateUserInput): Promise<User>;
   findUserByUsername(username: string): Promise<User | null>;
+  findUserById(id: number): Promise<User | null>;
   findMyProfile(userId: number): Promise<UserProfileDto>;
 }
 export interface UserSummary {
