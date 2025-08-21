@@ -62,6 +62,7 @@ export class PostsRepository {
           select: {
             id: true,
             name: true,
+            profileImgPath: true,
           },
         },
         _count: {
@@ -88,6 +89,7 @@ export class PostsRepository {
           select: {
             id: true,
             name: true,
+            profileImgPath: true,
           },
         },
         _count: {
