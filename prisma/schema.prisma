@@ -20,17 +20,23 @@ enum MembershipStatus {
   LEFT
 }
 
+enum PostCategory {
+  NORMAL
+  ANNOUNCEMENT
+}
+
 //// ===== Models =====
 model User {
-  id         Int         @id @default(autoincrement())
-  username   String      @unique @map("user_name") @db.VarChar(20)
-  password   String      @db.VarChar(60)
-  name       String      @db.VarChar(50)
-  createdAt  DateTime    @default(now()) @map("created_at")
-  comments   Comment[]
-  postLikes  PostLike[]
-  posts      Post[]
-  userGroups UserGroup[]
+  id             Int         @id @default(autoincrement())
+  username       String      @unique @map("user_name") @db.VarChar(20)
+  password       String      @db.VarChar(60)
+  name           String      @db.VarChar(50)
+  profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  comments       Comment[]
+  postLikes      PostLike[]
+  posts          Post[]
+  userGroups     UserGroup[]
 
   @@map("users")
 }
@@ -40,7 +46,7 @@ model Group {
   name         String      @db.VarChar(100)
   description  String?
   createdAt    DateTime    @default(now()) @map("created_at")
-  groupImgPath String?     @map("group_img_path")        // ← 추가
+  groupImgPath String?     @map("group_img_path") @db.VarChar(255)
   posts        Post[]
   userGroups   UserGroup[]
 
@@ -48,47 +54,53 @@ model Group {
 }
 
 model UserGroup {
-  id        Int               @id @default(autoincrement())
-  userId    Int               @map("user_id")
-  groupId   Int               @map("group_id")
-  role      UserGroupRole                                 // ← String → enum
-  status    MembershipStatus   @default(PENDING)          // ← 추가
-  leftAt    DateTime?          @map("left_at")            // ← 추가
-  createdAt DateTime           @default(now()) @map("created_at")
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  groupId   Int              @map("group_id")
+  role      UserGroupRole    @default(MEMBER)
+  status    MembershipStatus @default(PENDING)
+  leftAt    DateTime?        @map("left_at")
+  createdAt DateTime         @default(now()) @map("created_at")
 
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
+  @@index([groupId, status]) // 특정 그룹의 멤버 상태별 조회 (예: 가입 대기 멤버)
+  @@index([userId, status]) // 특정 유저의 가입 그룹 상태별 조회 (예: 유저가 가입 대기 중인 그룹)
+  @@index([groupId]) // 특정 그룹의 모든 멤버를 조회할 때 (status 필터링 없이)
+  @@index([userId]) // 특정 유저가 속한 모든 그룹을 조회할 때 (status 필터링 없이)
   @@map("user_groups")
 }
 
 model Post {
-  id         Int          @id @default(autoincrement())
-  userId     Int          @map("user_id")
-  groupId    Int          @map("group_id")
-  title      String       @db.VarChar(255)
-  content    String
-  createdAt  DateTime     @default(now()) @map("created_at")
-  updatedAt  DateTime?    @map("updated_at")
-  category   PostCategory @default(NORMAL)
+  id        Int          @id @default(autoincrement())
+  userId    Int          @map("user_id")
+  groupId   Int          @map("group_id")
+  title     String       @db.VarChar(255)
+  content   String
+  category  PostCategory @default(NORMAL)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime?    @map("updated_at")
+
   comments   Comment[]
   postImages PostImage[]
   postLikes  PostLike[]
-  group      Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([groupId, createdAt])
   @@map("posts")
 }
 
 model PostImage {
-  id          Int       @id @default(autoincrement())
-  postId      Int       @map("post_id")
-  postImgPath String    @unique @map("post_img_path")   // ← url → path 필드 교체
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id          Int      @id @default(autoincrement())
+  postId      Int      @map("post_id")
+  postImgPath String   @map("post_img_path") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("post_images")
 }
@@ -101,6 +113,7 @@ model PostLike {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+  @@index([postId])
   @@map("post_likes")
 }
 
@@ -120,9 +133,4 @@ model Comment {
   @@index([postId])
   @@index([parentId])
   @@map("comments")
-}
-
-enum PostCategory {
-  NORMAL
-  ANNOUNCEMENT
 }

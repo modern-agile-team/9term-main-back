@@ -46,11 +46,19 @@ export class PostLikesRepository {
     });
   }
 
-  // 게시물 좋아요 개수 조회
-  async getPostLikeCount(postId: number): Promise<number> {
-    const count = await this.prisma.postLike.count({
-      where: { postId: postId },
+  // 해당 유저가 좋아요 누른 게시물 ID 목록 조회
+  async findLikedPostIdsByUser(
+    userId: number,
+    postIds: number[],
+  ): Promise<number[]> {
+    const likes = await this.prisma.postLike.findMany({
+      where: {
+        userId,
+        postId: { in: postIds },
+      },
+      select: { postId: true },
     });
-    return count;
+
+    return likes.map((like) => like.postId);
   }
 }

@@ -7,30 +7,23 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
-import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
-import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
-
+import { User } from 'src/auth/user.decorator';
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
 import { ApiPosts } from './post.swagger';
 import { PostsService } from './posts.service';
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUserResponse;
-}
 
 @ApiBearerAuth('access-token')
 @Controller('groups/:groupId/posts')
@@ -46,14 +39,12 @@ export class PostsController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() createPostDto: CreatePostRequestDto,
     @UploadedFile() uploadedFile: Express.Multer.File,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<PostWriteResponseDto>> {
-    const userId = req.user.userId;
-
     const createdPost = await this.postsService.createPost(
       createPostDto,
       groupId,
-      userId,
+      user.userId,
       uploadedFile,
     );
 
@@ -72,8 +63,12 @@ export class PostsController {
   @ApiPosts.getAll()
   async getAllPosts(
     @Param('groupId', ParseIntPipe) groupId: number,
+    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<PostResponseDto[]>> {
-    const posts = await this.postsService.findAllPostsByGroupId(groupId);
+    const posts = await this.postsService.findAllPostsByGroupId(
+      groupId,
+      user.userId,
+    );
 
     const response = plainToInstance(PostResponseDto, posts, {
       excludeExtraneousValues: true,
@@ -86,23 +81,23 @@ export class PostsController {
     };
   }
 
-  @Get(':postId')
-  @ApiPosts.getOne()
-  async getPostById(
-    @Param('postId', ParseIntPipe) postId: number,
-  ): Promise<ApiResponseDto<PostResponseDto>> {
-    const post = await this.postsService.getPostById(postId);
+  // @Get(':postId')
+  // @ApiPosts.getOne()
+  // async getPostById(
+  //   @Param('postId', ParseIntPipe) postId: number,
+  // ): Promise<ApiResponseDto<PostResponseDto>> {
+  //   const post = await this.postsService.getPostById(postId);
 
-    const response = plainToInstance(PostResponseDto, post, {
-      excludeExtraneousValues: true,
-    });
+  //   const response = plainToInstance(PostResponseDto, post, {
+  //     excludeExtraneousValues: true,
+  //   });
 
-    return {
-      status: 'success',
-      message: '게시물을 성공적으로 가져왔습니다.',
-      data: response,
-    };
-  }
+  //   return {
+  //     status: 'success',
+  //     message: '게시물을 성공적으로 가져왔습니다.',
+  //     data: response,
+  //   };
+  // }
 
   @Patch(':postId')
   @ApiConsumes('application/json')
@@ -110,14 +105,12 @@ export class PostsController {
   async updatePost(
     @Param('postId', ParseIntPipe) postId: number,
     @Body() updatePostDto: UpdatePostRequestDto,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<PostWriteResponseDto>> {
-    const userId = req.user.userId;
-
     const updatedPost = await this.postsService.updatePost(
       updatePostDto,
       postId,
-      userId,
+      user.userId,
     );
 
     const response = plainToInstance(PostWriteResponseDto, updatedPost, {
@@ -135,11 +128,9 @@ export class PostsController {
   @ApiPosts.delete()
   async deletePost(
     @Param('postId', ParseIntPipe) postId: number,
-    @Req() req: AuthenticatedRequest,
+    @User() user: AuthenticatedUser,
   ): Promise<ApiResponseDto<null>> {
-    const userId = req.user.userId;
-
-    await this.postsService.deletePost(postId, userId);
+    await this.postsService.deletePost(postId, user.userId);
 
     return {
       status: 'success',

@@ -1,16 +1,17 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { UserRepository } from './user.repository';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtStrategy } from './access.strategy';
-import { JwtRefreshStrategy } from './refresh.strategy';
-import { PasswordEncoderService } from './password-encoder.service';
+import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from 'src/users/users.module';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { JwtRefreshGuard } from './guards/refresh.guard';
+import { PasswordEncoderService } from './password-encoder.service';
+import { JwtStrategy } from './strategies/access.strategy';
+import { JwtRefreshStrategy } from './strategies/refresh.strategy';
 
 @Module({
   imports: [
+    UsersModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -25,7 +26,6 @@ import { JwtRefreshGuard } from './guards/refresh.guard';
   ],
   providers: [
     AuthService,
-    UserRepository,
     JwtStrategy,
     JwtRefreshStrategy,
     PasswordEncoderService,
