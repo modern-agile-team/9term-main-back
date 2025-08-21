@@ -12,8 +12,8 @@ export class UserInfoDto {
 
   @ApiProperty({
     example:
-      'https://your-bucket.s3.ap-northeast-2.amazonaws.com/posts/uuid.jpeg',
-    description: '작성자 이름',
+      'https://your-bucket.s3.ap-northeast-2.amazonaws.com/profile/uuid.jpeg',
+    description: '프로필 이미지 URL (S3 public URL)',
     nullable: true,
   })
   @Expose()
