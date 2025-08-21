@@ -11,6 +11,7 @@ import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { S3Module } from './s3/s3.module';
 import { UsersModule } from './users/users.module';
+import { LoggerModule } from './logger/logger.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     PostsModule,
     CommentsModule,
     GroupsModule,
+    LoggerModule,
 
     MemberModule,
     PostLikesModule,
