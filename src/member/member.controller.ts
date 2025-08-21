@@ -6,6 +6,8 @@ import {
   UseGuards,
   Post,
   Body,
+  Query,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { MembersService } from './member.service';
 import { GroupMemberGuard } from './guards/group-member.guard';
@@ -21,6 +23,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { User } from '../auth/user.decorator';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { MemberAction } from './member-action.enum';
+import { MembershipStatus } from '@prisma/client';
 
 @Controller('groups/:groupId/members')
 @MemberSwagger()
@@ -34,8 +37,10 @@ export class MembersController {
   @ApiMembers.getList()
   async getMemberList(
     @Param('groupId', ParseIntPipe) groupId: number,
+    @Query('status', new ParseEnumPipe(MembershipStatus, { optional: true }))
+    status?: MembershipStatus,
   ): Promise<ApiResponseDto<MemberResponseDto[]>> {
-    const data = await this.membersService.getMembersByGroup(groupId);
+    const data = await this.membersService.getMembersByGroup(groupId, status);
     return {
       status: 'success',
       message: '멤버 목록이 성공적으로 조회되었습니다.',

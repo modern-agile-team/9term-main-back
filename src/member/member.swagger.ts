@@ -4,6 +4,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiQuery,
   ApiExtraModels,
   getSchemaPath,
   ApiTags,
@@ -14,6 +15,7 @@ import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { MemberAction } from './member-action.enum';
+import { MembershipStatus } from '@prisma/client';
 
 const unauthorizedResponse = () =>
   ApiResponse({
@@ -173,6 +175,13 @@ export const ApiMembers = {
     applyDecorators(
       ApiOperation({ summary: '그룹 멤버 목록 조회' }),
       ApiParam({ name: 'groupId', type: Number, description: '그룹 ID' }),
+      ApiQuery({
+        name: 'status',
+        required: false,
+        enum: MembershipStatus,
+        description:
+          '멤버십 상태로 필터링 (PENDING | APPROVED | REJECTED | LEFT)',
+      }),
       ApiArrayResponseWithData(MemberResponseDto, 200, '멤버 목록 조회 성공', {
         status: 'success',
         message: '멤버 목록이 성공적으로 조회되었습니다.',
