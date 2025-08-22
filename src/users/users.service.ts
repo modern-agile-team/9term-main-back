@@ -9,11 +9,10 @@ import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
-import { IUsersService } from './interfaces/users.interface';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
-export class UsersService implements IUsersService {
+export class UsersService {
   private readonly defaultImageKeys: string[];
 
   constructor(
