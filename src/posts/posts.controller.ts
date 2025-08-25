@@ -125,7 +125,7 @@ export class PostsController {
   }
 
   @Delete(':postId')
-  @ApiPosts.delete()
+  @ApiPosts.remove()
   async deletePost(
     @Param('postId', ParseIntPipe) postId: number,
     @User() user: AuthenticatedUser,
