@@ -24,6 +24,7 @@ import { PostWriteResponseDto } from './dto/responses/post-write-response.dto';
 import { PostResponseDto } from './dto/responses/post-response.dto';
 import { ApiPosts } from './post.swagger';
 import { PostsService } from './posts.service';
+import { GroupMemberGuard } from 'src/member/guards/group-member.guard';
 
 @ApiBearerAuth('access-token')
 @Controller('groups/:groupId/posts')
@@ -33,6 +34,7 @@ export class PostsController {
 
   @Post()
   @UseInterceptors(FileInterceptor('postImage'))
+  @UseGuards(CustomJwtAuthGuard, GroupMemberGuard)
   @ApiConsumes('multipart/form-data')
   @ApiPosts.create()
   async createPost(
