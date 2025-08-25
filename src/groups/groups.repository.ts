@@ -50,7 +50,11 @@ export class GroupsRepository {
     return this.prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { userGroups: true } },
+        _count: {
+          select: {
+            userGroups: { where: { status: MembershipStatus.APPROVED } },
+          },
+        },
       },
     });
   }
