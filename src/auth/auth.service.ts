@@ -19,7 +19,7 @@ export class AuthService {
 
   // 회원가입
   async signup(signupRequestDto: SignupRequestDto): Promise<void> {
-    const existingUser = await this.usersService.findUserByUsername(
+    const existingUser = await this.usersService.getUserByUsername(
       signupRequestDto.username,
     );
     if (existingUser) {
@@ -41,7 +41,7 @@ export class AuthService {
     accessToken: string;
     refreshToken: string;
   }> {
-    const user = await this.usersService.findUserByUsername(
+    const user = await this.usersService.getUserByUsername(
       loginRequestDto.username,
     );
     if (!user) {
@@ -81,7 +81,7 @@ export class AuthService {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      const user = await this.usersService.findUserByUsername(payload.username);
+      const user = await this.usersService.getUserByUsername(payload.username);
       if (!user) {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }
