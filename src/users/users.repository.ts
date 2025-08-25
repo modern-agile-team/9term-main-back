@@ -22,7 +22,7 @@ export class UsersRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
-  async findGroupsByUser(userId: number, status?: MembershipStatus) {
+  async findGroupsByUserWithStatus(userId: number, status?: MembershipStatus) {
     return this.prisma.userGroup.findMany({
       where: {
         userId,

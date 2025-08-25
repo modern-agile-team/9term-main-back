@@ -162,7 +162,7 @@ export class UsersService {
     status?: MembershipStatus,
   ): Promise<UserGroupSummaryDto[]> {
     try {
-      const memberships = await this.usersRepository.findGroupsByUser(
+      const memberships = await this.usersRepository.findGroupsByUserWithStatus(
         userId,
         status,
       );
