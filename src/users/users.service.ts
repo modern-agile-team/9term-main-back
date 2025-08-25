@@ -9,6 +9,8 @@ import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
+import { UserGroupSummaryDto } from 'src/users/dto/responses/user-group-summary.dto';
+import { MembershipStatus } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
@@ -89,6 +91,10 @@ export class UsersService {
     return this.usersRepository.findByUsername(username);
   }
 
+  async findUserById(id: number) {
+    return this.usersRepository.findUserById(id);
+  }
+
   async getProfile(userId: number): Promise<UserProfileDto> {
     const user = await this.getUserOrThrow(userId);
     return this.toUserProfileDto(user);
@@ -149,5 +155,40 @@ export class UsersService {
     }
 
     return this.toUserProfileDto(updatedUser);
+  }
+
+  async findMyGroups(
+    userId: number,
+    status?: MembershipStatus,
+  ): Promise<UserGroupSummaryDto[]> {
+    try {
+      const memberships = await this.usersRepository.findGroupsByUserWithStatus(
+        userId,
+        status,
+      );
+      return memberships.map((m) => {
+        let groupImgUrl: string | null = null;
+        if (m.group.groupImgPath) {
+          try {
+            groupImgUrl = this.s3Service.getFileUrl(m.group.groupImgPath);
+          } catch {
+            groupImgUrl = null;
+          }
+        }
+
+        return {
+          groupId: m.group.id,
+          groupName: m.group.name,
+          groupImgUrl,
+          role: m.role,
+          status: m.status,
+          joinedAt: m.createdAt,
+        };
+      });
+    } catch {
+      throw new InternalServerErrorException(
+        '내 그룹 목록 조회 중 오류가 발생했습니다.',
+      );
+    }
   }
 }

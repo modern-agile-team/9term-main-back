@@ -81,7 +81,7 @@ export class AuthService {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      const user = await this.usersService.getUserByUsername(payload.username);
+      const user = await this.usersService.findUserById(payload.sub);
       if (!user) {
         throw new BadRequestException('유효하지 않은 사용자입니다.');
       }

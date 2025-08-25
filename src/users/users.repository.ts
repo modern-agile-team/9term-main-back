@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { Prisma, User, MembershipStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -20,5 +20,24 @@ export class UsersRepository {
 
   async updateUser(id: number, data: Prisma.UserUpdateInput): Promise<User> {
     return this.prisma.user.update({ where: { id }, data });
+  }
+
+  async findGroupsByUserWithStatus(userId: number, status?: MembershipStatus) {
+    return this.prisma.userGroup.findMany({
+      where: {
+        userId,
+        ...(status
+          ? { status }
+          : {
+              status: {
+                in: [MembershipStatus.PENDING, MembershipStatus.APPROVED],
+              },
+            }),
+      },
+      include: {
+        group: { select: { id: true, name: true, groupImgPath: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

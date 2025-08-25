@@ -15,8 +15,11 @@ import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { CustomJwtAuthGuard } from '../auth/guards/access.guard';
 import { AuthenticatedUserResponse } from '../auth/interfaces/authenticated-user-response.interface';
 import { UserProfileDto } from './dto/responses/user-profile.dto';
+import { UserGroupSummaryDto } from './dto/responses/user-group-summary.dto';
 import { UsersService } from './users.service';
 import { ApiUsers } from './users.swagger';
+import { MembershipStatus } from '@prisma/client';
+import { ParseEnumPipe, Query } from '@nestjs/common';
 
 @ApiTags('Users')
 @Controller('users')
@@ -80,5 +83,16 @@ export class UsersController {
       message: '프로필 이미지가 기본 이미지로 변경되었습니다.',
       data: updatedUser,
     };
+  }
+
+  @Get('me/groups')
+  @ApiUsers.getMyGroups()
+  async getMyGroups(
+    @User() user: AuthenticatedUserResponse,
+    @Query('status', new ParseEnumPipe(MembershipStatus, { optional: true }))
+    status?: MembershipStatus,
+  ): Promise<ApiResponseDto<UserGroupSummaryDto[]>> {
+    const data = await this.usersService.findMyGroups(user.userId, status);
+    return { status: 'success', message: '내 그룹 목록 조회 성공', data };
   }
 }
