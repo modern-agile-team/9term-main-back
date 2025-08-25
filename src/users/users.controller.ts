@@ -33,7 +33,7 @@ export class UsersController {
   async getProfile(
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
-    const userProfileData = await this.usersService.findMyProfile(user.userId);
+    const userProfileData = await this.usersService.getProfile(user.userId);
 
     return {
       status: 'success',
@@ -76,7 +76,7 @@ export class UsersController {
   ): Promise<ApiResponseDto<UserProfileDto>> {
     const userId = user.userId;
 
-    const updatedUser = await this.usersService.deleteProfileImage(userId);
+    const updatedUser = await this.usersService.resetProfileImage(userId);
 
     return {
       status: 'success',

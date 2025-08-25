@@ -11,12 +11,22 @@ export interface Post {
   category: PostCategory;
 }
 
-export interface PostWithUser extends Post {
-  user: {
-    id: number;
-    name: string;
-  };
+export interface PostUserRaw {
+  id: number;
+  name: string;
+  profileImgPath: string | null;
 }
+
+export interface PostUserView {
+  id: number;
+  name: string;
+  profileImageUrl: string | null;
+}
+
+export interface PostWithUser extends Post {
+  user: PostUserRaw;
+}
+
 export interface PostImageLite {
   postImgPath: string;
 }
@@ -29,7 +39,8 @@ export interface PostWithUserAndCountRaw extends PostWithUser {
   postImages: PostImageLite[];
 }
 
-export interface PostSummary extends PostWithUser {
+export interface PostSummary extends Post {
+  user: PostUserView;
   commentsCount: number;
   likesCount: number;
   postImageUrl: string | null;

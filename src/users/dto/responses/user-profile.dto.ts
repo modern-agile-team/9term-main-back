@@ -19,5 +19,5 @@ export class UserProfileDto {
     example: 'https://example.com/profile/default_1.png',
     description: '프로필 이미지 URL',
   })
-  profileImgUrl: string;
+  profileImageUrl: string;
 }

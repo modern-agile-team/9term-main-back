@@ -19,7 +19,7 @@ export class AuthService {
 
   // 회원가입
   async signup(signupRequestDto: SignupRequestDto): Promise<void> {
-    const existingUser = await this.usersService.findUserByUsername(
+    const existingUser = await this.usersService.getUserByUsername(
       signupRequestDto.username,
     );
     if (existingUser) {
@@ -41,7 +41,7 @@ export class AuthService {
     accessToken: string;
     refreshToken: string;
   }> {
-    const user = await this.usersService.findUserByUsername(
+    const user = await this.usersService.getUserByUsername(
       loginRequestDto.username,
     );
     if (!user) {

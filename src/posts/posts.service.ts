@@ -84,7 +84,11 @@ export class PostsService {
         id: post.id,
         groupId: post.groupId,
         userId: post.userId,
-        user: { id: post.user.id, name: post.user.name },
+        user: {
+          id: post.user.id,
+          name: post.user.name,
+          profileImageUrl: this.toImageUrl(post.user.profileImgPath) ?? null,
+        },
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         category: post.category,
