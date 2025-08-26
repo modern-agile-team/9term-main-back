@@ -13,6 +13,7 @@ import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 
 import { CreatePostData, Post, PostSummary } from './interfaces/post.interface';
+import { GroupsRepository } from 'src/groups/groups.repository';
 
 @Injectable()
 export class PostsService {
@@ -20,6 +21,7 @@ export class PostsService {
     private readonly postsRepository: PostsRepository,
     private readonly s3Service: S3Service,
     private readonly postLikesRepository: PostLikesRepository,
+    private readonly groupRepostirory: GroupsRepository,
   ) {}
 
   private toImageUrl(key?: string | null): string | null {
@@ -67,6 +69,10 @@ export class PostsService {
     groupId: number,
     userId: number,
   ): Promise<PostSummary[]> {
+    const groups = await this.groupRepostirory.findGroupById(groupId);
+    if (!groups) {
+      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
+    }
     const postsWithCounts =
       await this.postsRepository.findPostsWithCommentsCount(groupId);
 

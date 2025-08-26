@@ -5,9 +5,15 @@ import { PostsService } from './posts.service';
 import { S3Module } from 'src/s3/s3.module';
 import { PostLikesModule } from 'src/likes/post-likes.module';
 import { MemberModule } from 'src/member/member.module';
+import { GroupsModule } from 'src/groups/groups.module';
 
 @Module({
-  imports: [S3Module, forwardRef(() => PostLikesModule), MemberModule],
+  imports: [
+    S3Module,
+    forwardRef(() => PostLikesModule),
+    MemberModule,
+    GroupsModule,
+  ],
   controllers: [PostsController],
   providers: [PostsService, PostsRepository],
   exports: [PostsRepository],
