@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { GroupMemberGuard } from 'src/member/guards/group-member.guard';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ApiComments } from './comment.swagger';
 import { CommentsService } from './comments.service';
@@ -29,6 +30,7 @@ import { ResCommentDto } from './dto/responses/res-comment.dto';
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
+  @UseGuards(GroupMemberGuard)
   @Post()
   @ApiComments.create()
   async createComment(
@@ -75,6 +77,7 @@ export class CommentsController {
     };
   }
 
+  @UseGuards(GroupMemberGuard)
   @Patch(':id')
   @ApiComments.update()
   async updateComment(
@@ -102,6 +105,7 @@ export class CommentsController {
     };
   }
 
+  @UseGuards(GroupMemberGuard)
   @Delete(':id')
   @ApiComments.delete()
   async deleteComment(
