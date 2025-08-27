@@ -37,9 +37,33 @@ const notFoundExamples = {
   },
 };
 
+const forbiddenExamples = {
+  GroupMemberForbidden: {
+    message: '승인된 그룹 멤버만 접근할 수 있습니다.',
+    error: 'Forbidden',
+    statusCode: 403,
+  },
+  CommentForbidden: {
+    message: '해당 댓글을 수정하거나 삭제할 권한이 없습니다.',
+    error: 'Forbidden',
+    statusCode: 403,
+  },
+};
+
 // 래핑 함수
 const withUnauthorizedResponses = () =>
   unauthorizedResponses(unauthorizedExamples);
+
+const withForbiddenResponses = (keys: (keyof typeof forbiddenExamples)[]) =>
+  ForbiddenResponses(
+    keys.reduce(
+      (obj, key) => {
+        obj[key] = forbiddenExamples[key];
+        return obj;
+      },
+      {} as Record<string, any>,
+    ),
+  );
 
 const withNotFoundResponses = (keys: (keyof typeof notFoundExamples)[]) =>
   NotFoundResponses(
@@ -200,17 +224,27 @@ const unauthorizedResponses = (examples: {
   });
 
 // 인증 / 권한 관련 응답
-const forbiddenResponse = () =>
+const ForbiddenResponses = (examples: {
+  [key: string]: { message: string; error: string; statusCode: number };
+}) =>
   ApiResponse({
     status: 403,
     description: '권한 없음',
     content: {
       'application/json': {
-        example: {
-          message: '해당 댓글을 수정하거나 삭제할 권한이 없습니다.',
-          error: 'Forbidden',
-          statusCode: 403,
-        },
+        examples: Object.entries(examples).reduce(
+          (acc, [name, exValue]) => {
+            acc[name] = {
+              value: {
+                message: exValue.message,
+                error: exValue.error,
+                statusCode: exValue.statusCode,
+              },
+            };
+            return acc;
+          },
+          {} as { [key: string]: { value: any } },
+        ),
       },
     },
   });
@@ -255,6 +289,7 @@ export const ApiComments = {
       ),
       badRequestResponse(),
       withUnauthorizedResponses(),
+      withForbiddenResponses(['GroupMemberForbidden']),
       withNotFoundResponses(['PostNotFound']),
     ),
 
@@ -266,7 +301,7 @@ export const ApiComments = {
         200,
         '댓글이 성공적으로 수정되었습니다.',
       ),
-      forbiddenResponse(),
+      withForbiddenResponses(['GroupMemberForbidden', 'CommentForbidden']),
       withUnauthorizedResponses(),
       withNotFoundResponses(['PostNotFound', 'CommentNotFound']),
     ),
@@ -275,7 +310,7 @@ export const ApiComments = {
     applyDecorators(
       ApiOperation({ summary: '댓글 삭제', description: '댓글을 삭제합니다.' }),
       successResponseNoData('댓글이 성공적으로 삭제되었습니다.'),
-      forbiddenResponse(),
+      withForbiddenResponses(['GroupMemberForbidden', 'CommentForbidden']),
       withUnauthorizedResponses(),
       withNotFoundResponses(['PostNotFound', 'CommentNotFound']),
     ),
