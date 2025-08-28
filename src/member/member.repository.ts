@@ -38,7 +38,10 @@ export class MemberRepository {
     return this.prisma.userGroup.findMany({
       where: {
         groupId,
-        ...filters,
+        ...(filters?.status
+          ? { status: filters.status }
+          : { status: { not: MembershipStatus.LEFT } }),
+        ...(filters?.role ? { role: filters.role } : {}),
       },
       include: {
         user: true,
