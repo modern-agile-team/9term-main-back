@@ -57,6 +57,7 @@ export interface PostImage {
 export interface CreatePostData {
   title: string;
   content: string;
+  category: PostCategory;
   groupId: number;
   userId: number;
 }

@@ -1,5 +1,6 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PostCategory } from '@prisma/client';
 
 export class UpdatePostRequestDto {
   @ApiPropertyOptional({ example: '수정된 제목' })
@@ -12,4 +13,9 @@ export class UpdatePostRequestDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({ example: '수정된 게시물 유형' })
+  @IsOptional()
+  @IsEnum(PostCategory)
+  category?: PostCategory;
 }
