@@ -27,9 +27,9 @@ export class PostsService {
     private readonly memberRepository: MemberRepository,
   ) {}
 
-  private async ensureManagerOrAdmin(groupId: number, userId: number) {
+  private async ensureManager(groupId: number, userId: number) {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
-    if (!member || member.role === UserGroupRole.MEMBER) {
+    if (!member || member.role !== UserGroupRole.MANAGER) {
       throw new ForbiddenException('공지 작성/변경은 관리자만 가능합니다');
     }
   }
@@ -45,7 +45,7 @@ export class PostsService {
     fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
     if (createPostDto.category === PostCategory.ANNOUNCEMENT) {
-      await this.ensureManagerOrAdmin(groupId, userId);
+      await this.ensureManager(groupId, userId);
     }
 
     let uploadedImageKey: string | undefined;
@@ -140,7 +140,7 @@ export class PostsService {
     }
 
     if (updatePostDto.category !== undefined) {
-      await this.ensureManagerOrAdmin(post.groupId, userId);
+      await this.ensureManager(post.groupId, userId);
     }
 
     return this.postsRepository.updatePost(postId, {
