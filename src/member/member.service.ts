@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { MembershipStatus, UserGroupRole } from '@prisma/client';
@@ -24,6 +25,7 @@ export class MembersService {
     private readonly memberRepository: MemberRepository,
     private readonly groupsRepository: GroupsRepository,
     private readonly notificationsService: NotificationsService,
+    private readonly logger = new Logger(MembersService.name),
   ) {}
 
   private async ensureGroupExists(groupId: number): Promise<void> {
@@ -82,11 +84,18 @@ export class MembersService {
     const managers = await this.memberRepository.findManagersByGroup(groupId);
     const managerIds = managers.map((m) => m.userId);
 
-    await this.notificationsService.notifyJoinRequest(
-      groupId,
-      userId,
-      managerIds,
-    );
+    try {
+      await this.notificationsService.notifyJoinRequest(
+        groupId,
+        userId,
+        managerIds,
+      );
+    } catch (error) {
+      this.logger.error(
+        `가입 요청 알림 전송 실패: ${error.message}`,
+        error.stack,
+      );
+    }
 
     const newMember = await this.memberRepository.upsertMember({
       groupId,

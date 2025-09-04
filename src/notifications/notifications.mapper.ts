@@ -25,6 +25,13 @@ export function toNotificationResponseDto(entity: {
         payload: { groupId: notification.groupId! },
       };
     default:
-      throw new Error('지원하지 않는 알림 타입');
+      return {
+        id: notification.id,
+        type: notification.type,
+        message: notification.message ?? '지원하지 않는 알림입니다.',
+        createdAt: notification.createdAt,
+        isRead,
+        payload: null,
+      };
   }
 }
