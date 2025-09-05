@@ -14,6 +14,8 @@ import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 
 import { CreatePostData, Post, PostSummary } from './interfaces/post.interface';
 import { GroupsRepository } from 'src/groups/groups.repository';
+import { MemberRepository } from 'src/member/member.repository';
+import { PostCategory, UserGroupRole } from '@prisma/client';
 
 @Injectable()
 export class PostsService {
@@ -22,7 +24,15 @@ export class PostsService {
     private readonly s3Service: S3Service,
     private readonly postLikesRepository: PostLikesRepository,
     private readonly groupRepostirory: GroupsRepository,
+    private readonly memberRepository: MemberRepository,
   ) {}
+
+  private async ensureManager(groupId: number, userId: number) {
+    const member = await this.memberRepository.findGroupMember(groupId, userId);
+    if (!member || member.role !== UserGroupRole.MANAGER) {
+      throw new ForbiddenException('공지 작성/변경은 메니저만 가능합니다');
+    }
+  }
 
   private toImageUrl(key?: string | null): string | null {
     return key ? this.s3Service.getFileUrl(key) : null;
@@ -34,8 +44,12 @@ export class PostsService {
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
-    let uploadedImageKey: string | undefined;
+    const category = createPostDto.category ?? PostCategory.NORMAL;
+    if (createPostDto.category === PostCategory.ANNOUNCEMENT) {
+      await this.ensureManager(groupId, userId);
+    }
 
+    let uploadedImageKey: string | undefined;
     try {
       if (fileToUpload) {
         uploadedImageKey = await this.s3Service.uploadFile(fileToUpload, {
@@ -47,6 +61,7 @@ export class PostsService {
       const createData: CreatePostData = {
         title: createPostDto.title,
         content: createPostDto.content,
+        category,
         groupId,
         userId,
       };
@@ -121,13 +136,23 @@ export class PostsService {
         `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
       );
     }
-    if (post.userId !== userId) {
-      throw new ForbiddenException('이 게시물을 수정할 권한이 없습니다.');
+
+    const needsManager =
+      post.category === PostCategory.ANNOUNCEMENT ||
+      updatePostDto.category === PostCategory.ANNOUNCEMENT;
+
+    if (needsManager) {
+      await this.ensureManager(post.groupId, userId);
+    } else {
+      if (post.userId !== userId) {
+        throw new ForbiddenException('작성자만 수정할 수 있습니다.');
+      }
     }
 
     return this.postsRepository.updatePost(postId, {
       title: updatePostDto.title,
       content: updatePostDto.content,
+      category: updatePostDto.category,
     });
   }
 

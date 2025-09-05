@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PostCategory } from '@prisma/client';
 import { Expose } from 'class-transformer';
 
 export class PostWriteResponseDto {
@@ -21,6 +22,14 @@ export class PostWriteResponseDto {
   @ApiProperty({ example: '본문', description: '게시물 내용' })
   @Expose()
   content: string;
+
+  @ApiProperty({
+    example: PostCategory.ANNOUNCEMENT,
+    description: '게시물 유형',
+    enum: PostCategory,
+  })
+  @Expose()
+  category: PostCategory;
 
   @ApiProperty({ example: '2025-07-04T10:00:00Z', description: '작성일' })
   @Expose()
