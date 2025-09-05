@@ -4,9 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Observable, Subject } from 'rxjs';
-import { GroupsRepository } from 'src/groups/groups.repository';
-import { MemberRepository } from 'src/member/member.repository';
-import { UsersRepository } from 'src/users/users.repository';
 import { NotificationResponseDto } from './dto/notification.dto';
 import { toNotificationResponseDto } from './notifications.mapper';
 import { NotificationsRepository } from './notifications.repository';
@@ -20,9 +17,6 @@ export class NotificationsService {
 
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
-    private readonly memberRepository: MemberRepository,
-    private readonly groupsRepository: GroupsRepository,
-    private readonly usersRepository: UsersRepository,
   ) {}
 
   subscribeToUser(userId: number): Observable<NotificationResponseDto> {
@@ -45,7 +39,7 @@ export class NotificationsService {
     });
   }
 
-  //   // 특정 사용자의 알림 목록 조회
+  // 특정 사용자의 알림 목록 조회
   async getNotificationsByUserId(
     userId: number,
   ): Promise<NotificationResponseDto[]> {
@@ -99,32 +93,24 @@ export class NotificationsService {
 
   // 가입 신청 알림 로직
   async notifyJoinRequest(
-    groupId: number,
-    senderId: number,
+    group: { id: number; name: string },
+    sender: { id: number; name: string },
     recipientIds: number[],
   ): Promise<NotificationResponseDto> {
     // 알림 생성 여부 확인 (중복 전송 방지)
     const existingNotification =
-      await this.notificationsRepository.findJoinRequest(groupId, senderId);
+      await this.notificationsRepository.findJoinRequest(group.id, sender.id);
 
     if (existingNotification) {
       throw new ConflictException(`이미 동일한 알림이 존재합니다.`);
     }
 
-    const [group, sender] = await Promise.all([
-      this.groupsRepository.findGroupById(groupId),
-      this.usersRepository.findUserById(senderId),
-    ]);
-
-    if (!group || !sender) {
-      throw new NotFoundException('필수 정보를 찾을 수 없습니다.');
-    }
     const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
 
     // DB 저장
     const notification = await this.notificationsRepository.createJoinRequest(
-      senderId,
-      groupId,
+      sender.id,
+      group.id,
       message,
       recipientIds,
     );

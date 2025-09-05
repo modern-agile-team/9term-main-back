@@ -84,6 +84,7 @@ export class MemberRepository {
       create: data,
       include: {
         user: true,
+        group: true,
       },
     });
   }

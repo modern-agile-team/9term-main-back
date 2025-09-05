@@ -21,11 +21,12 @@ import { MemberRepository } from './member.repository';
 
 @Injectable()
 export class MembersService {
+  private readonly logger = new Logger(MembersService.name);
+
   constructor(
     private readonly memberRepository: MemberRepository,
     private readonly groupsRepository: GroupsRepository,
     private readonly notificationsService: NotificationsService,
-    private readonly logger = new Logger(MembersService.name),
   ) {}
 
   private async ensureGroupExists(groupId: number): Promise<void> {
@@ -81,22 +82,6 @@ export class MembersService {
       throw new ConflictException('이미 신청 중이거나 가입된 그룹입니다.');
     }
 
-    const managers = await this.memberRepository.findManagersByGroup(groupId);
-    const managerIds = managers.map((m) => m.userId);
-
-    try {
-      await this.notificationsService.notifyJoinRequest(
-        groupId,
-        userId,
-        managerIds,
-      );
-    } catch (error) {
-      this.logger.error(
-        `가입 요청 알림 전송 실패: ${error.message}`,
-        error.stack,
-      );
-    }
-
     const newMember = await this.memberRepository.upsertMember({
       groupId,
       userId,
@@ -108,6 +93,22 @@ export class MembersService {
           ? null
           : undefined,
     });
+
+    const managers = await this.memberRepository.findManagersByGroup(groupId);
+    const managerIds = managers.map((m) => m.userId);
+
+    try {
+      await this.notificationsService.notifyJoinRequest(
+        { id: groupId, name: newMember.group.name },
+        { id: userId, name: newMember.user.name },
+        managerIds,
+      );
+    } catch (error) {
+      this.logger.error(
+        `가입 요청 알림 전송 실패: ${error.message}`,
+        error.stack,
+      );
+    }
 
     return toMemberResponseDto(newMember);
   }
