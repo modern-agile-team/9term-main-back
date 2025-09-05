@@ -30,7 +30,7 @@ export class PostsService {
   private async ensureManager(groupId: number, userId: number) {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
     if (!member || member.role !== UserGroupRole.MANAGER) {
-      throw new ForbiddenException('공지 작성/변경은 관리자만 가능합니다');
+      throw new ForbiddenException('공지 작성/변경은 메니저만 가능합니다');
     }
   }
 
@@ -136,17 +136,23 @@ export class PostsService {
         `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
       );
     }
-    if (post.userId !== userId) {
-      throw new ForbiddenException('이 게시물을 수정할 권한이 없습니다.');
-    }
 
-    if (updatePostDto.category !== undefined) {
+    const needsManager =
+      post.category === PostCategory.ANNOUNCEMENT ||
+      updatePostDto.category === PostCategory.ANNOUNCEMENT;
+
+    if (needsManager) {
       await this.ensureManager(post.groupId, userId);
+    } else {
+      if (post.userId !== userId) {
+        throw new ForbiddenException('작성자만 수정할 수 있습니다.');
+      }
     }
 
     return this.postsRepository.updatePost(postId, {
       title: updatePostDto.title,
       content: updatePostDto.content,
+      category: updatePostDto.category,
     });
   }
 

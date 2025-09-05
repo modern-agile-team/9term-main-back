@@ -65,4 +65,5 @@ export interface CreatePostData {
 export interface UpdatePostData {
   title?: string;
   content?: string;
+  category?: PostCategory;
 }
