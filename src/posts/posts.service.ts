@@ -44,6 +44,7 @@ export class PostsService {
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<Post> {
+    const category = createPostDto.category ?? PostCategory.NORMAL;
     if (createPostDto.category === PostCategory.ANNOUNCEMENT) {
       await this.ensureManager(groupId, userId);
     }
@@ -60,7 +61,7 @@ export class PostsService {
       const createData: CreatePostData = {
         title: createPostDto.title,
         content: createPostDto.content,
-        category: createPostDto.category,
+        category,
         groupId,
         userId,
       };
