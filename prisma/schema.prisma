@@ -37,8 +37,23 @@ model User {
   postLikes      PostLike[]
   posts          Post[]
   userGroups     UserGroup[]
+  oauthAccounts  OAuthAccount[]
 
   @@map("users")
+}
+
+model OAuthAccount {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  provider    String   @db.VarChar(20) // 예: "google", "kakao", "apple"
+  providerId  String   @db.VarChar(50) @map("provider_id") // OAuth 제공자가 주는 고유 ID
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId]) // 같은 계정이 중복 등록되지 않도록
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Group {
