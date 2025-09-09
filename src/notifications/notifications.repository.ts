@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Notification, NotificationType } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -89,19 +89,6 @@ export class NotificationsRepository {
   async deleteUserNotification(notificationId: number, userId: number) {
     await this.prisma.userNotification.delete({
       where: { notificationId_userId: { notificationId, userId } },
-    });
-  }
-
-  async findJoinRequest(
-    groupId: number,
-    senderId: number,
-  ): Promise<Notification | null> {
-    return this.prisma.notification.findFirst({
-      where: {
-        type: NotificationType.NEW_JOIN_REQUEST,
-        groupId,
-        senderId,
-      },
     });
   }
 }

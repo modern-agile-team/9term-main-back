@@ -1,40 +1,32 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Observable, Subject } from 'rxjs';
-import { NotificationResponseDto } from './dto/notification.dto';
 import { toNotificationResponseDto } from './notifications.mapper';
 import { NotificationsRepository } from './notifications.repository';
-
+import { NotificationResponseDto } from './types/notification-response.type';
+import { NotificationSignal } from './types/notification-signal.type';
 @Injectable()
 export class NotificationsService {
   private readonly userSubjects = new Map<
     number,
-    Subject<NotificationResponseDto>
+    Subject<NotificationSignal>
   >();
 
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
   ) {}
 
-  subscribeToUser(userId: number): Observable<NotificationResponseDto> {
+  subscribeToUser(userId: number): Observable<NotificationSignal> {
     if (!this.userSubjects.has(userId)) {
-      this.userSubjects.set(userId, new Subject<NotificationResponseDto>());
+      this.userSubjects.set(userId, new Subject<NotificationSignal>());
     }
-    const subject = this.userSubjects.get(userId)!;
-    return subject.asObservable();
+    return this.userSubjects.get(userId)!.asObservable();
   }
 
-  private sendNotification(
-    recipientIds: number[],
-    payload: NotificationResponseDto,
-  ) {
+  private sendNotification(recipientIds: number[]) {
     recipientIds.forEach((userId) => {
       const subject = this.userSubjects.get(userId);
       if (subject) {
-        subject.next(payload);
+        subject.next({ type: 'NEW_NOTIFICATION' });
       }
     });
   }
@@ -97,14 +89,6 @@ export class NotificationsService {
     sender: { id: number; name: string },
     recipientIds: number[],
   ): Promise<NotificationResponseDto> {
-    // 알림 생성 여부 확인 (중복 전송 방지)
-    const existingNotification =
-      await this.notificationsRepository.findJoinRequest(group.id, sender.id);
-
-    if (existingNotification) {
-      throw new ConflictException(`이미 동일한 알림이 존재합니다.`);
-    }
-
     const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
 
     // DB 저장
@@ -117,7 +101,7 @@ export class NotificationsService {
 
     const response = toNotificationResponseDto(notification);
     // 페이로드 전달
-    this.sendNotification(recipientIds, response);
+    this.sendNotification(recipientIds);
 
     return response;
   }

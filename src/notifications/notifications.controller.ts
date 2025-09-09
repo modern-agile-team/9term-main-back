@@ -2,6 +2,7 @@ import {
   Controller,
   Delete,
   Get,
+  MessageEvent,
   Param,
   ParseIntPipe,
   Patch,
@@ -13,8 +14,8 @@ import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
 import { User } from 'src/auth/user.decorator';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
-import { NotificationResponseDto } from './dto/notification.dto';
 import { NotificationsService } from './notifications.service';
+import { NotificationResponseDto } from './types/notification-response.type';
 
 @Controller('notifications')
 @UseGuards(CustomJwtAuthGuard)
@@ -22,12 +23,10 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Sse('stream')
-  sse(
-    @User() user: AuthenticatedUserResponse,
-  ): Observable<{ data: NotificationResponseDto }> {
+  sse(@User() user: AuthenticatedUserResponse): Observable<MessageEvent> {
     return this.notificationsService
       .subscribeToUser(user.userId)
-      .pipe(map((payload) => ({ data: payload })));
+      .pipe(map((signal) => ({ type: 'NEW_NOTIFICATION', data: signal })));
   }
 
   // 모든 알림 가져오기
