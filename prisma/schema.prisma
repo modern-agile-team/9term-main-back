@@ -25,6 +25,11 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+enum GroupRecruitStatus {
+  RECRUITING
+  ALWAYS_OPEN
+  CLOSED
+}
 //// ===== Models =====
 model User {
   id             Int         @id @default(autoincrement())
@@ -49,6 +54,7 @@ model Group {
   groupImgPath String?     @map("group_img_path") @db.VarChar(255)
   posts        Post[]
   userGroups   UserGroup[]
+  recruitStatus GroupRecruitStatus @default(RECRUITING)
 
   @@map("groups")
 }

@@ -27,6 +27,7 @@ import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { User } from 'src/auth/user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { GroupManagerGuard } from 'src/member/guards/group-manager.guard';
+import { UpdateRecruitStatusDto } from './dto/update-recruit.dto';
 
 @ApiTags('Groups')
 @Controller('groups')
@@ -154,5 +155,18 @@ export class GroupsController {
       message: '그룹이 성공적으로 삭제되었습니다.',
       data: null,
     };
+  }
+
+  @Patch(':groupId/recruitment')
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @ApiBearerAuth()
+  async updateRecruitStatus(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Body() updateRecruitStatusDto: UpdateRecruitStatusDto,
+  ): Promise<void> {
+    return this.groupsService.updateRecruitStatus(
+      groupId,
+      updateRecruitStatusDto.recruitStatus,
+    );
   }
 }

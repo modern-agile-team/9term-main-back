@@ -5,6 +5,7 @@ import {
   UserGroup,
   UserGroupRole,
   MembershipStatus,
+  GroupRecruitStatus,
 } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
@@ -131,6 +132,16 @@ export class GroupsRepository {
   async deleteGroupById(groupId: number, tx?: TxClient): Promise<void> {
     await (tx ?? this.prisma).group.delete({
       where: { id: groupId },
+    });
+  }
+
+  async updateRecruitStatusByGroupId(
+    groupId: number,
+    recruitStatus: GroupRecruitStatus,
+  ): Promise<void> {
+    await this.prisma.group.update({
+      where: { id: groupId },
+      data: { recruitStatus },
     });
   }
 }

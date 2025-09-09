@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { GroupResponseDto } from './group-response.dto';
 import { Expose } from 'class-transformer';
+import { GroupRecruitStatus } from '@prisma/client';
 
 export class GroupWithMemberCountDto extends GroupResponseDto {
   @ApiProperty({
@@ -12,4 +13,12 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
 
   @Expose()
   groupImageUrl: string;
+
+  @ApiProperty({
+    description: '모집 상태',
+    enum: GroupRecruitStatus,
+    example: GroupRecruitStatus.RECRUITING,
+  })
+  @Expose()
+  recruitStatus: GroupRecruitStatus;
 }
