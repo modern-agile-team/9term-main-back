@@ -1,27 +1,32 @@
 import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { MemberRepository } from './member.repository';
+import { MembershipStatus, UserGroupRole } from '@prisma/client';
+import { NotificationsService } from 'src/notifications/notifications.service';
 import { GroupsRepository } from '../groups/groups.repository';
 import { JoinMemberRequestDto } from './dto/join-member-request.dto';
 import { MemberResponseDto } from './dto/member-response.dto';
-import { MembershipStatus, UserGroupRole } from '@prisma/client';
-import { MemberAction } from './member-action.enum';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import {
   toMemberResponseDto,
   toMemberResponseList,
 } from './mappers/member.mapper';
+import { MemberAction } from './member-action.enum';
+import { MemberRepository } from './member.repository';
 
 @Injectable()
 export class MembersService {
+  private readonly logger = new Logger(MembersService.name);
+
   constructor(
     private readonly memberRepository: MemberRepository,
     private readonly groupsRepository: GroupsRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async ensureGroupExists(groupId: number): Promise<void> {
@@ -88,6 +93,22 @@ export class MembersService {
           ? null
           : undefined,
     });
+
+    const managers = await this.memberRepository.findManagersByGroup(groupId);
+    const managerIds = managers.map((m) => m.userId);
+
+    try {
+      await this.notificationsService.notifyJoinRequest(
+        { id: groupId, name: newMember.group.name },
+        { id: userId, name: newMember.user.name },
+        managerIds,
+      );
+    } catch (error) {
+      this.logger.error(
+        `가입 요청 알림 전송 실패: ${error.message}`,
+        error.stack,
+      );
+    }
 
     return toMemberResponseDto(newMember);
   }
