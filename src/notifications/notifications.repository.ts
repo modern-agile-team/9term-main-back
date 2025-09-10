@@ -10,7 +10,7 @@ export class NotificationsRepository {
     groupId: number,
     message: string,
     managerIds: number[],
-  ) {
+  ): Promise<{ isRead: boolean; notification: any }> {
     const notification = await this.prisma.notification.create({
       data: {
         type: NotificationType.NEW_JOIN_REQUEST,
@@ -72,21 +72,24 @@ export class NotificationsRepository {
     });
   }
 
-  async markAsRead(notificationId: number, userId: number) {
+  async markAsRead(notificationId: number, userId: number): Promise<void> {
     await this.prisma.userNotification.update({
       where: { notificationId_userId: { notificationId, userId } },
       data: { isRead: true },
     });
   }
 
-  async markAllAsRead(userId: number) {
+  async markAllAsRead(userId: number): Promise<void> {
     await this.prisma.userNotification.updateMany({
       where: { userId, isRead: false },
       data: { isRead: true },
     });
   }
 
-  async deleteUserNotification(notificationId: number, userId: number) {
+  async deleteUserNotification(
+    notificationId: number,
+    userId: number,
+  ): Promise<void> {
     await this.prisma.userNotification.delete({
       where: { notificationId_userId: { notificationId, userId } },
     });

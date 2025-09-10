@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Observable, Subject } from 'rxjs';
-import { toNotificationResponseDto } from './notifications.mapper';
+import {
+  toFallbackNotification,
+  toNotificationResponseDto,
+} from './notifications.mapper';
 import { NotificationsRepository } from './notifications.repository';
 import { NotificationResponseDto } from './types/notification-response.type';
 import { NotificationSignal } from './types/notification-signal.type';
+
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
   private readonly userSubjects = new Map<
     number,
     Subject<NotificationSignal>
@@ -38,11 +43,19 @@ export class NotificationsService {
     const userNotifications =
       await this.notificationsRepository.getUserNotifications(userId);
 
-    return userNotifications.map(toNotificationResponseDto);
+    return userNotifications.map((n) => {
+      try {
+        return toNotificationResponseDto(n);
+      } catch (err) {
+        this.logger.error(`${err} (id=${n.notification.id})`);
+
+        return toFallbackNotification(n);
+      }
+    });
   }
 
   // 특정 알림 읽음 상태 변경
-  async markAsRead(notificationId: number, userId: number) {
+  async markAsRead(notificationId: number, userId: number): Promise<void> {
     const result = await this.notificationsRepository.findUserNotification(
       notificationId,
       userId,
@@ -100,7 +113,6 @@ export class NotificationsService {
     );
 
     const response = toNotificationResponseDto(notification);
-    // 페이로드 전달
     this.sendNotification(recipientIds);
 
     return response;
