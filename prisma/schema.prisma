@@ -30,31 +30,40 @@ enum GroupRecruitStatus {
   ALWAYS_OPEN
   CLOSED
 }
+
+enum NotificationType {
+  NEW_JOIN_REQUEST
+  NEW_POST_IN_GROUP
+}
+
 //// ===== Models =====
 model User {
-  id             Int         @id @default(autoincrement())
-  username       String      @unique @map("user_name") @db.VarChar(20)
-  password       String      @db.VarChar(60)
-  name           String      @db.VarChar(50)
-  profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
-  createdAt      DateTime    @default(now()) @map("created_at")
-  comments       Comment[]
-  postLikes      PostLike[]
-  posts          Post[]
-  userGroups     UserGroup[]
+  id                    Int                @id @default(autoincrement())
+  username              String             @unique @map("user_name") @db.VarChar(20)
+  password              String             @db.VarChar(60)
+  name                  String             @db.VarChar(50)
+  profileImgPath        String?            @map("profile_img_path") @db.VarChar(255)
+  createdAt             DateTime           @default(now()) @map("created_at")
+  comments              Comment[]
+  postLikes             PostLike[]
+  posts                 Post[]
+  userGroups            UserGroup[]
+  receivedNotifications UserNotification[] @relation("ReceivedNotifications")
+  sentNotifications     Notification[]     @relation("SentNotifications")
 
   @@map("users")
 }
 
 model Group {
-  id           Int         @id @default(autoincrement())
-  name         String      @db.VarChar(100)
-  description  String?
-  createdAt    DateTime    @default(now()) @map("created_at")
-  groupImgPath String?     @map("group_img_path") @db.VarChar(255)
-  posts        Post[]
-  userGroups   UserGroup[]
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(100)
+  description   String?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  groupImgPath  String?         @map("group_img_path") @db.VarChar(255)
+  posts         Post[]
+  userGroups    UserGroup[]
   recruitStatus GroupRecruitStatus @default(OPEN)
+  notifications Notification[]
 
   @@map("groups")
 }
@@ -89,9 +98,10 @@ model Post {
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime?    @map("updated_at")
 
-  comments   Comment[]
-  postImages PostImage[]
-  postLikes  PostLike[]
+  comments      Comment[]
+  postImages    PostImage[]
+  postLikes     PostLike[]
+  notifications Notification[]
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -139,4 +149,36 @@ model Comment {
   @@index([postId])
   @@index([parentId])
   @@map("comments")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  message   String           @db.Text
+  groupId   Int?             @map("group_id")
+  postId    Int?             @map("post_id")
+  senderId  Int?             @map("sender_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  group  Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  post   Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender User?  @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+
+  recipients UserNotification[]
+
+  @@map("notifications")
+}
+
+model UserNotification {
+  notificationId Int      @map("notification_id")
+  userId         Int      @map("user_id")
+  isRead         Boolean  @default(false) @map("is_read")
+  receivedAt     DateTime @default(now()) @map("received_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation("ReceivedNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId]) // 복합 기본 키
+  @@index([userId, receivedAt])  // 사용자별 알림 조회 및 최신순 정렬
+  @@map("user_notifications")
 }
