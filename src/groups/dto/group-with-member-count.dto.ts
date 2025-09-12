@@ -17,7 +17,7 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
   @ApiProperty({
     description: '모집 상태',
     enum: GroupRecruitStatus,
-    example: GroupRecruitStatus.RECRUITING,
+    example: GroupRecruitStatus.OPEN,
   })
   @Expose()
   recruitStatus: GroupRecruitStatus;

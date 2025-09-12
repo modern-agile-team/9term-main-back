@@ -238,9 +238,8 @@ export class GroupsService {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    await this.groupsRepository.updateRecruitStatusByGroupId(
-      groupId,
+    await this.groupsRepository.updateGroupById(groupId, {
       recruitStatus,
-    );
+    });
   }
 }

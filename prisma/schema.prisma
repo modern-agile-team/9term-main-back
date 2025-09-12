@@ -26,7 +26,7 @@ enum PostCategory {
 }
 
 enum GroupRecruitStatus {
-  RECRUITING
+  OPEN
   ALWAYS_OPEN
   CLOSED
 }
@@ -54,7 +54,7 @@ model Group {
   groupImgPath String?     @map("group_img_path") @db.VarChar(255)
   posts        Post[]
   userGroups   UserGroup[]
-  recruitStatus GroupRecruitStatus @default(RECRUITING)
+  recruitStatus GroupRecruitStatus @default(OPEN)
 
   @@map("groups")
 }
