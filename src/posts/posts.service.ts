@@ -1,30 +1,35 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 
-import { PostsRepository } from './posts.repository';
 import { PostLikesRepository } from 'src/likes/post-likes.repository';
+import { PostsRepository } from './posts.repository';
 
 import { CreatePostRequestDto } from './dto/requests/create-post.dto';
 import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
 
-import { CreatePostData, Post, PostSummary } from './interfaces/post.interface';
+import { PostCategory, UserGroupRole } from '@prisma/client';
 import { GroupsRepository } from 'src/groups/groups.repository';
 import { MemberRepository } from 'src/member/member.repository';
-import { PostCategory, UserGroupRole } from '@prisma/client';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { CreatePostData, Post, PostSummary } from './interfaces/post.interface';
 
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
+
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly s3Service: S3Service,
     private readonly postLikesRepository: PostLikesRepository,
-    private readonly groupRepostirory: GroupsRepository,
+    private readonly groupsRepository: GroupsRepository,
     private readonly memberRepository: MemberRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async ensureManager(groupId: number, userId: number) {
@@ -66,10 +71,27 @@ export class PostsService {
         userId,
       };
 
-      return this.postsRepository.createPostWithImage(
+      const post = await this.postsRepository.createPostWithImage(
         createData,
         uploadedImageKey,
       );
+
+      const recipientIds = await this.memberRepository.findMemberIdsByGroup(
+        groupId,
+        userId,
+      );
+
+      // 게시물 생성 후 알림 추가
+      try {
+        await this.notificationsService.notifyNewPost(post, recipientIds);
+      } catch (error) {
+        this.logger.warn(
+          `새 게시물 알림 전송 실패: ${error.message}`,
+          error.stack,
+        );
+      }
+
+      return post;
     } catch (error) {
       if (uploadedImageKey) {
         await this.s3Service
@@ -84,7 +106,7 @@ export class PostsService {
     groupId: number,
     userId: number,
   ): Promise<PostSummary[]> {
-    const groups = await this.groupRepostirory.findGroupById(groupId);
+    const groups = await this.groupsRepository.findGroupById(groupId);
     if (!groups) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }

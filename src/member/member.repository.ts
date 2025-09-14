@@ -50,6 +50,22 @@ export class MemberRepository {
     });
   }
 
+  // 본인 제외 그룹 내 멤버 가져오기
+  async findMemberIdsByGroup(
+    groupId: number,
+    excludeUserId: number,
+  ): Promise<number[]> {
+    const memberIds = await this.prisma.userGroup.findMany({
+      where: {
+        groupId,
+        status: MembershipStatus.APPROVED,
+        userId: { not: excludeUserId },
+      },
+      select: { userId: true },
+    });
+    return memberIds.map((m) => m.userId);
+  }
+
   async findManagersByGroup(groupId: number): Promise<{ userId: number }[]> {
     return this.prisma.userGroup.findMany({
       where: {

@@ -10,7 +10,7 @@ type BaseNotification = {
 
 type NotificationPayloadMap = {
   [NotificationType.NEW_JOIN_REQUEST]: { groupId: number };
-  [NotificationType.NEW_POST_IN_GROUP]: { groupId: number; postId: number };
+  [NotificationType.NEW_POST_IN_GROUP]: { postId: number };
 };
 
 export type NotificationResponseDto =

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import {
+  NotificationType,
+  Notification as PrismaNotification,
+} from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -10,7 +13,7 @@ export class NotificationsRepository {
     groupId: number,
     message: string,
     managerIds: number[],
-  ): Promise<{ isRead: boolean; notification: any }> {
+  ): Promise<{ isRead: boolean; notification: PrismaNotification }> {
     const notification = await this.prisma.notification.create({
       data: {
         type: NotificationType.NEW_JOIN_REQUEST,
@@ -18,6 +21,34 @@ export class NotificationsRepository {
         groupId,
         message,
         recipients: { create: managerIds.map((userId) => ({ userId })) },
+      },
+    });
+
+    return {
+      isRead: false,
+      notification,
+    };
+  }
+
+  async createNewPost(
+    senderId: number,
+    groupId: number,
+    postId: number,
+    message: string,
+    recipientIds: number[],
+  ): Promise<{ isRead: boolean; notification: PrismaNotification }> {
+    const notification = await this.prisma.notification.create({
+      data: {
+        type: NotificationType.NEW_POST_IN_GROUP,
+        senderId,
+        groupId,
+        postId,
+        message,
+        recipients: {
+          create: recipientIds.map((userId) => ({
+            userId,
+          })),
+        },
       },
     });
 
@@ -49,6 +80,7 @@ export class NotificationsRepository {
         message: string;
         senderId: number | null;
         groupId: number | null;
+        postId: number | null;
         createdAt: Date;
       };
     }[]
@@ -65,6 +97,7 @@ export class NotificationsRepository {
             message: true,
             senderId: true,
             groupId: true,
+            postId: true,
             createdAt: true,
           },
         },
