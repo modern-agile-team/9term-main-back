@@ -29,7 +29,7 @@ enum PostCategory {
 enum OAuthProvider {
   GOOGLE
   KAKAO
-
+}
 enum NotificationType {
   NEW_JOIN_REQUEST
   NEW_POST_IN_GROUP
@@ -52,6 +52,8 @@ model User {
   posts          Post[]
   userGroups     UserGroup[]
   oauthAccounts  OAuthAccount[]
+  receivedNotifications UserNotification[] @relation("ReceivedNotifications")
+  sentNotifications     Notification[]     @relation("SentNotifications")
 
 
   @@map("users")
