@@ -25,13 +25,20 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+
 enum OAuthProvider {
   GOOGLE
   KAKAO
+
+enum NotificationType {
+  NEW_JOIN_REQUEST
+  NEW_POST_IN_GROUP
+
 }
 
 //// ===== Models =====
 model User {
+
   id             Int         @id @default(autoincrement())
   username       String      @unique @map("user_name") @db.VarChar(20)
   email          String?     @unique @db.VarChar(255)
@@ -45,6 +52,7 @@ model User {
   posts          Post[]
   userGroups     UserGroup[]
   oauthAccounts  OAuthAccount[]
+
 
   @@map("users")
 }
@@ -65,13 +73,14 @@ model OAuthAccount {
 }
 
 model Group {
-  id           Int         @id @default(autoincrement())
-  name         String      @db.VarChar(100)
-  description  String?
-  createdAt    DateTime    @default(now()) @map("created_at")
-  groupImgPath String?     @map("group_img_path") @db.VarChar(255)
-  posts        Post[]
-  userGroups   UserGroup[]
+  id            Int            @id @default(autoincrement())
+  name          String         @db.VarChar(100)
+  description   String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  groupImgPath  String?        @map("group_img_path") @db.VarChar(255)
+  posts         Post[]
+  userGroups    UserGroup[]
+  notifications Notification[]
 
   @@map("groups")
 }
@@ -106,9 +115,10 @@ model Post {
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime?    @map("updated_at")
 
-  comments   Comment[]
-  postImages PostImage[]
-  postLikes  PostLike[]
+  comments      Comment[]
+  postImages    PostImage[]
+  postLikes     PostLike[]
+  notifications Notification[]
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -156,4 +166,36 @@ model Comment {
   @@index([postId])
   @@index([parentId])
   @@map("comments")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  message   String           @db.Text
+  groupId   Int?             @map("group_id")
+  postId    Int?             @map("post_id")
+  senderId  Int?             @map("sender_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  group  Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  post   Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender User?  @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+
+  recipients UserNotification[]
+
+  @@map("notifications")
+}
+
+model UserNotification {
+  notificationId Int      @map("notification_id")
+  userId         Int      @map("user_id")
+  isRead         Boolean  @default(false) @map("is_read")
+  receivedAt     DateTime @default(now()) @map("received_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation("ReceivedNotifications", fields: [userId], references: [id], onDelete: Cascade) // User 삭제 시 해당 알림 기록 삭제
+
+  @@id([notificationId, userId]) // 복합 기본 키
+  @@index([userId, receivedAt]) // 사용자별 알림 조회 및 최신순 정렬
+  @@map("user_notifications")
 }

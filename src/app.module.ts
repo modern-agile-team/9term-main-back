@@ -7,6 +7,7 @@ import { CommentsModule } from './comments/comments.module';
 import { GroupsModule } from './groups/groups.module';
 import { PostLikesModule } from './likes/post-likes.module';
 import { MemberModule } from './member/member.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { S3Module } from './s3/s3.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
 
     MemberModule,
     PostLikesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

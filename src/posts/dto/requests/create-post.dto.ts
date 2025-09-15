@@ -1,5 +1,12 @@
-import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  MaxLength,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { PostCategory } from '@prisma/client';
 
 export class CreatePostRequestDto {
   @ApiProperty({ example: '게시물 제목', description: '게시물 제목' })
@@ -12,4 +19,13 @@ export class CreatePostRequestDto {
   @IsString()
   @IsNotEmpty()
   content: string;
+
+  @ApiProperty({
+    example: PostCategory.NORMAL,
+    enum: PostCategory,
+    description: '게시물 유형',
+  })
+  @IsEnum(PostCategory)
+  @IsOptional()
+  category?: PostCategory = PostCategory.NORMAL;
 }

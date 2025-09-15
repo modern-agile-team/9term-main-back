@@ -33,10 +33,6 @@ export class PostResponseDto {
   @Expose()
   updatedAt: Date | null;
 
-  @ApiProperty({ example: PostCategory.NORMAL, description: '분류' })
-  @Expose()
-  category: PostCategory;
-
   @ApiProperty({ example: '제목', description: '게시물 제목' })
   @Expose()
   title: string;
@@ -44,6 +40,14 @@ export class PostResponseDto {
   @ApiProperty({ example: '본문 내용', description: '게시물 내용' })
   @Expose()
   content: string;
+
+  @ApiProperty({
+    example: PostCategory.NORMAL,
+    enum: PostCategory,
+    description: '분류',
+  })
+  @Expose()
+  category: PostCategory;
 
   @ApiProperty({
     example:

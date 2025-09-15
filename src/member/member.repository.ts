@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   MembershipStatus,
-  UserGroupRole,
-  User,
   UserGroup as PrismaUserGroup,
+  User,
+  UserGroupRole,
 } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MemberRepository {
@@ -50,6 +50,18 @@ export class MemberRepository {
     });
   }
 
+  async findManagersByGroup(groupId: number): Promise<{ userId: number }[]> {
+    return this.prisma.userGroup.findMany({
+      where: {
+        groupId: groupId,
+        role: UserGroupRole.MANAGER,
+      },
+      select: {
+        userId: true,
+      },
+    });
+  }
+
   async upsertMember(data: {
     groupId: number;
     userId: number;
@@ -72,6 +84,7 @@ export class MemberRepository {
       create: data,
       include: {
         user: true,
+        group: true,
       },
     });
   }
