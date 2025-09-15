@@ -83,7 +83,7 @@ export class PostsService {
 
       // 게시물 생성 후 알림 추가
       try {
-        await this.notificationsService.notifyNewPost(post, recipientIds);
+        await this.notificationsService.notifyByNewPost(post, recipientIds);
       } catch (error) {
         this.logger.warn(
           `새 게시물 알림 전송 실패: ${error.message}`,

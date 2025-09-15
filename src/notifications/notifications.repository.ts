@@ -8,7 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class NotificationsRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async createJoinRequest(
+  async createJoinRequestNoti(
     senderId: number,
     groupId: number,
     message: string,
@@ -20,7 +20,9 @@ export class NotificationsRepository {
         senderId,
         groupId,
         message,
-        recipients: { create: managerIds.map((userId) => ({ userId })) },
+        recipients: {
+          create: managerIds.map((userId) => ({ userId })),
+        },
       },
     });
 
@@ -30,7 +32,7 @@ export class NotificationsRepository {
     };
   }
 
-  async createNewPost(
+  async createPostNoti(
     senderId: number,
     groupId: number,
     postId: number,
@@ -45,9 +47,7 @@ export class NotificationsRepository {
         postId,
         message,
         recipients: {
-          create: recipientIds.map((userId) => ({
-            userId,
-          })),
+          create: recipientIds.map((userId) => ({ userId })),
         },
       },
     });

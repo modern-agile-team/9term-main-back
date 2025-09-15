@@ -101,7 +101,7 @@ export class NotificationsService {
   }
 
   // 가입 신청 알림 로직
-  async notifyJoinRequest(
+  async notifyByJoinRequest(
     group: { id: number; name: string },
     sender: { id: number; name: string },
     recipientIds: number[],
@@ -109,12 +109,13 @@ export class NotificationsService {
     const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
 
     // DB 저장
-    const notification = await this.notificationsRepository.createJoinRequest(
-      sender.id,
-      group.id,
-      message,
-      recipientIds,
-    );
+    const notification =
+      await this.notificationsRepository.createJoinRequestNoti(
+        sender.id,
+        group.id,
+        message,
+        recipientIds,
+      );
 
     const response = toNotificationResponseDto(notification);
     this.sendNotification(recipientIds);
@@ -123,7 +124,7 @@ export class NotificationsService {
   }
 
   // 새 게시물 알림 로직
-  async notifyNewPost(
+  async notifyByNewPost(
     post: { id: number; title: string; userId: number; groupId: number },
     recipientIds: number[],
   ): Promise<NotificationResponseDto> {
@@ -134,7 +135,7 @@ export class NotificationsService {
 
     const message = `${group.name}에 새 게시물 '${post.title}'이(가) 등록되었습니다.`;
 
-    const notification = await this.notificationsRepository.createNewPost(
+    const notification = await this.notificationsRepository.createPostNoti(
       post.userId,
       post.groupId,
       post.id,
