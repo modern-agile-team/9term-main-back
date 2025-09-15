@@ -8,6 +8,9 @@ import { JwtRefreshGuard } from './guards/refresh.guard';
 import { PasswordEncoderService } from './password-encoder.service';
 import { JwtStrategy } from './strategies/access.strategy';
 import { JwtRefreshStrategy } from './strategies/refresh.strategy';
+import { PassportModule } from '@nestjs/passport';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { OAuthService } from './oauth.service';
 
 @Module({
   imports: [
@@ -23,15 +26,18 @@ import { JwtRefreshStrategy } from './strategies/refresh.strategy';
         },
       }),
     }),
+    PassportModule.register({ session: false }),
   ],
   providers: [
     AuthService,
+    OAuthService,
     JwtStrategy,
     JwtRefreshStrategy,
     PasswordEncoderService,
     JwtRefreshGuard,
+    GoogleStrategy,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

@@ -25,11 +25,18 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+enum OAuthProvider {
+  GOOGLE
+  KAKAO
+}
+
 //// ===== Models =====
 model User {
   id             Int         @id @default(autoincrement())
   username       String      @unique @map("user_name") @db.VarChar(20)
-  password       String      @db.VarChar(60)
+  email          String?     @unique @db.VarChar(255)
+  emailVerified  Boolean     @default(false)
+  password       String?     @db.VarChar(60)
   name           String      @db.VarChar(50)
   profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
   createdAt      DateTime    @default(now()) @map("created_at")
@@ -43,15 +50,16 @@ model User {
 }
 
 model OAuthAccount {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  provider    String   @db.VarChar(20) // 예: "google", "kakao", "apple"
-  providerId  String   @db.VarChar(50) @map("provider_id") // OAuth 제공자가 주는 고유 ID
-  createdAt   DateTime @default(now()) @map("created_at")
+  id          Int            @id @default(autoincrement())
+  userId      Int            @map("user_id")
+  provider    OAuthProvider  // enum 타입으로 변경
+  providerId  String         @db.VarChar(50) @map("provider_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerId]) // 같은 계정이 중복 등록되지 않도록
+  @@unique([userId, provider])
+  @@unique([provider, providerId])
   @@index([userId])
   @@map("oauth_accounts")
 }
