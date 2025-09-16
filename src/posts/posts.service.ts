@@ -76,11 +76,9 @@ export class PostsService {
         uploadedImageKey,
       );
 
-      const recipientIds = await this.memberRepository.findMemberIdsByGroup(
-        groupId,
-        userId,
-      );
-
+      const memberIds =
+        await this.memberRepository.findMemberIdsByGroup(groupId);
+      const recipientIds = memberIds.filter((memberId) => memberId !== userId);
       // 게시물 생성 후 알림 추가
       try {
         await this.notificationsService.notifyByNewPost(post, recipientIds);
