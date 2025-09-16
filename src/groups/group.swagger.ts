@@ -41,7 +41,6 @@ const forbiddenExamples = () =>
       'application/json': {
         examples: {
           NotGroupManager: {
-            // summary는 선택 사항이지만 가독성을 위해 추가
             summary: '그룹 매니저가 아님',
             value: {
               message: `권한이 없습니다. 이 작업은 그룹 ${UserGroupRole.MANAGER}만 가능합니다.`,
