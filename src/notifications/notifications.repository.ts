@@ -13,8 +13,8 @@ export class NotificationsRepository {
     groupId: number,
     message: string,
     managerIds: number[],
-  ): Promise<{ isRead: boolean; notification: PrismaNotification }> {
-    const notification = await this.prisma.notification.create({
+  ): Promise<PrismaNotification> {
+    return this.prisma.notification.create({
       data: {
         type: NotificationType.NEW_JOIN_REQUEST,
         senderId,
@@ -25,11 +25,6 @@ export class NotificationsRepository {
         },
       },
     });
-
-    return {
-      isRead: false,
-      notification,
-    };
   }
 
   async createPostNoti(
@@ -38,8 +33,8 @@ export class NotificationsRepository {
     postId: number,
     message: string,
     recipientIds: number[],
-  ): Promise<{ isRead: boolean; notification: PrismaNotification }> {
-    const notification = await this.prisma.notification.create({
+  ): Promise<PrismaNotification> {
+    return this.prisma.notification.create({
       data: {
         type: NotificationType.NEW_POST_IN_GROUP,
         senderId,
@@ -51,11 +46,6 @@ export class NotificationsRepository {
         },
       },
     });
-
-    return {
-      isRead: false,
-      notification,
-    };
   }
 
   // 특정 유저의 특정 알림 조회
@@ -71,7 +61,7 @@ export class NotificationsRepository {
   }
 
   // 특정 유저의 모든 알림 가져오기
-  async getUserNotifications(userId: number): Promise<
+  async getNotificationsByUserId(userId: number): Promise<
     {
       isRead: boolean;
       notification: {

@@ -40,11 +40,11 @@ export class NotificationsService {
   }
 
   // 특정 사용자의 알림 목록 조회
-  async getNotificationsByUserId(
+  async getUserNotifications(
     userId: number,
   ): Promise<NotificationResponseDto[]> {
     const userNotifications =
-      await this.notificationsRepository.getUserNotifications(userId);
+      await this.notificationsRepository.getNotificationsByUserId(userId);
 
     return userNotifications.map((n) => {
       try {
@@ -105,29 +105,25 @@ export class NotificationsService {
     group: { id: number; name: string },
     sender: { id: number; name: string },
     recipientIds: number[],
-  ): Promise<NotificationResponseDto> {
+  ): Promise<void> {
     const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
 
     // DB 저장
-    const notification =
-      await this.notificationsRepository.createJoinRequestNoti(
-        sender.id,
-        group.id,
-        message,
-        recipientIds,
-      );
+    await this.notificationsRepository.createJoinRequestNoti(
+      sender.id,
+      group.id,
+      message,
+      recipientIds,
+    );
 
-    const response = toNotificationResponseDto(notification);
     this.sendNotification(recipientIds);
-
-    return response;
   }
 
   // 새 게시물 알림 로직
   async notifyByNewPost(
     post: { id: number; title: string; userId: number; groupId: number },
     recipientIds: number[],
-  ): Promise<NotificationResponseDto> {
+  ): Promise<void> {
     const group = await this.groupsRepository.findGroupById(post.groupId);
     if (!group) {
       throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
@@ -135,16 +131,14 @@ export class NotificationsService {
 
     const message = `${group.name}에 새 게시물 '${post.title}'이(가) 등록되었습니다.`;
 
-    const notification = await this.notificationsRepository.createPostNoti(
+    await this.notificationsRepository.createPostNoti(
       post.userId,
       post.groupId,
       post.id,
       message,
       recipientIds,
     );
-    const response = toNotificationResponseDto(notification);
-    this.sendNotification(recipientIds);
 
-    return response;
+    this.sendNotification(recipientIds);
   }
 }
