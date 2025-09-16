@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { josa } from 'josa';
 import { Observable, Subject } from 'rxjs';
 import { GroupsRepository } from 'src/groups/groups.repository';
 import {
@@ -106,7 +107,7 @@ export class NotificationsService {
     sender: { id: number; name: string },
     recipientIds: number[],
   ): Promise<void> {
-    const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
+    const message = `${sender.name}님이 '${group.name}' 그룹 가입을 요청했습니다.`;
 
     // DB 저장
     await this.notificationsRepository.createJoinRequestNoti(
@@ -129,7 +130,9 @@ export class NotificationsService {
       throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
     }
 
-    const message = `${group.name}에 새 게시물 '${post.title}'이(가) 등록되었습니다.`;
+    const message = josa(
+      `${group.name}에 새 게시물 '${post.title}'#{이} 등록되었습니다.`,
+    );
 
     await this.notificationsRepository.createPostNoti(
       post.userId,
