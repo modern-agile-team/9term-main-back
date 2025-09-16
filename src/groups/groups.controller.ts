@@ -160,6 +160,7 @@ export class GroupsController {
   @Patch(':groupId/recruitment')
   @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
   @ApiBearerAuth()
+  @ApiGroups.updateRecruitment()
   async updateRecruitStatus(
     @Param('groupId', ParseIntPipe) groupId: number,
     @Body() updateRecruitStatusDto: UpdateRecruitStatusDto,
