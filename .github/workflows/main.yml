@@ -58,8 +58,20 @@ jobs:
     env:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
       CONTAINER_NAME: modonggu-backend # 컨테이너 이름
+      DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Prisma Migrate Deploy
+        run: |
+          docker run --rm \
+          -e DATABASE_URL="$DATABASE_URL" \
+          -v "${{ github.workspace }}":/app -w /app \
+          node:20 \
+          sh -c 'npm install prisma@$(node -p "require(\"./package.json\").devDependencies.prisma") --no-save && npx prisma migrate deploy'
+
       - name: Pull latest Docker image
         run: |
           echo "최신 도커 이미지 Pull 중..."
