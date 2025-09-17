@@ -50,6 +50,18 @@ export class MemberRepository {
     });
   }
 
+  // 그룹 내 멤버 ID 가져오기 (APPROVED)
+  async findMemberIdsByGroup(
+    groupId: number,
+    status: MembershipStatus = MembershipStatus.APPROVED,
+  ): Promise<number[]> {
+    const memberIds = await this.prisma.userGroup.findMany({
+      where: { groupId, status },
+      select: { userId: true },
+    });
+    return memberIds.map((m) => m.userId);
+  }
+
   async findManagersByGroup(groupId: number): Promise<{ userId: number }[]> {
     return this.prisma.userGroup.findMany({
       where: {

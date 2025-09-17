@@ -34,7 +34,7 @@ export class NotificationsController {
   async getNotifications(
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<NotificationResponseDto[]>> {
-    const data = await this.notificationsService.getNotificationsByUserId(
+    const data = await this.notificationsService.getUserNotifications(
       user.userId,
     );
     return {

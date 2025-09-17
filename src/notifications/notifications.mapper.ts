@@ -9,7 +9,8 @@ export function toNotificationResponseDto(entity: {
     type: NotificationType;
     message: string;
     senderId: number | null;
-    groupId: number | null;
+    groupId?: number | null;
+    postId?: number | null;
     createdAt: Date;
   };
 }): NotificationResponseDto {
@@ -24,6 +25,18 @@ export function toNotificationResponseDto(entity: {
         createdAt: notification.createdAt,
         isRead,
         payload: { groupId: notification.groupId! },
+      };
+    case NotificationType.NEW_POST_IN_GROUP:
+      return {
+        id: notification.id,
+        type: notification.type,
+        message: notification.message,
+        createdAt: notification.createdAt,
+        isRead,
+        payload: {
+          groupId: notification.groupId!,
+          postId: notification.postId!,
+        },
       };
     default:
       throw new InternalServerErrorException(
