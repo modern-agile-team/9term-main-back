@@ -114,7 +114,15 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(
-    @Req() req: any,
+    @Req()
+    req: Request & {
+      user: {
+        providerId: string;
+        email?: string;
+        emailVerified: boolean;
+        displayName?: string;
+      };
+    },
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponseDto<AuthTokenDataDto>> {
     const tokens = await this.authService.oauthLogin({
@@ -122,6 +130,7 @@ export class AuthController {
       providerId: req.user.providerId,
       email: req.user.email,
       emailVerified: req.user.emailVerified,
+      displayName: req.user.displayName,
     });
 
     res.cookie('refresh_token', tokens.refreshToken, this.getCookieOptions());

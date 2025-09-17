@@ -5,4 +5,5 @@ export interface OAuthInput {
   providerId: string;
   email?: string;
   emailVerified?: boolean;
+  displayName?: string;
 }

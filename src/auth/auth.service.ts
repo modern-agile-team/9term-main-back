@@ -2,7 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { OAuthProvider, User } from '@prisma/client';
+import { User } from '@prisma/client';
+import { OAuthInput } from './interfaces/oauth.interface';
 import { UsersService } from 'src/users/users.service';
 import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
@@ -84,13 +85,9 @@ export class AuthService {
     }
   }
 
-  async oauthLogin(params: {
-    provider: OAuthProvider;
-    providerId: string;
-    email?: string;
-    emailVerified?: boolean;
-    currentUserId?: number;
-  }): Promise<{ accessToken: string; refreshToken: string }> {
+  async oauthLogin(
+    params: OAuthInput,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.oauthService.resolveUser(params);
     if (!user) {
       throw new InternalServerErrorException('OAuth 처리 실패');
