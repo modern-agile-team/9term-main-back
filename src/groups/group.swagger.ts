@@ -33,6 +33,26 @@ const unauthorizedExamples = () =>
     },
   });
 
+const forbiddenExamples = () =>
+  ApiResponse({
+    status: 403,
+    description: '권한 부족(매니저 전용 동작)',
+    content: {
+      'application/json': {
+        examples: {
+          NotGroupManager: {
+            summary: '그룹 매니저가 아님',
+            value: {
+              message: `권한이 없습니다. 이 작업은 그룹 ${UserGroupRole.MANAGER}만 가능합니다.`,
+              error: 'Forbidden',
+              statusCode: 403,
+            },
+          },
+        },
+      },
+    },
+  });
+
 const badRequestExamples = () =>
   ApiResponse({
     status: 400,
@@ -356,5 +376,21 @@ export const ApiGroups = {
       }),
       notFoundExamples(['Group']),
       unauthorizedExamples(),
+    ),
+
+  updateRecruitment: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '모집 상태 변경',
+        description: '모집 상태를 변경합니다',
+      }),
+      ApiResponse({
+        status: 200,
+        description: '모집 상태 변경 성공',
+      }),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
+      forbiddenExamples(),
+      badRequestExamples(),
     ),
 };

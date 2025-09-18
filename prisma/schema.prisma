@@ -25,6 +25,12 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+enum GroupRecruitStatus {
+  OPEN
+  ALWAYS_OPEN
+  CLOSED
+}
+
 enum NotificationType {
   NEW_JOIN_REQUEST
   NEW_POST_IN_GROUP
@@ -49,13 +55,14 @@ model User {
 }
 
 model Group {
-  id            Int            @id @default(autoincrement())
-  name          String         @db.VarChar(100)
+  id            Int               @id @default(autoincrement())
+  name          String            @db.VarChar(100)
   description   String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  groupImgPath  String?        @map("group_img_path") @db.VarChar(255)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  groupImgPath  String?           @map("group_img_path") @db.VarChar(255)
   posts         Post[]
   userGroups    UserGroup[]
+  recruitStatus GroupRecruitStatus @default(OPEN)
   notifications Notification[]
 
   @@map("groups")
@@ -75,9 +82,9 @@ model UserGroup {
 
   @@unique([userId, groupId])
   @@index([groupId, status]) // 특정 그룹의 멤버 상태별 조회 (예: 가입 대기 멤버)
-  @@index([userId, status]) // 특정 유저의 가입 그룹 상태별 조회 (예: 유저가 가입 대기 중인 그룹)
-  @@index([groupId]) // 특정 그룹의 모든 멤버를 조회할 때 (status 필터링 없이)
-  @@index([userId]) // 특정 유저가 속한 모든 그룹을 조회할 때 (status 필터링 없이)
+  @@index([userId, status])  // 특정 유저의 가입 그룹 상태별 조회 (예: 유저가 가입 대기 중인 그룹)
+  @@index([groupId])         // 특정 그룹의 모든 멤버 조회 (status 필터링 없이)
+  @@index([userId])          // 특정 유저가 속한 모든 그룹 조회 (status 필터링 없이)
   @@map("user_groups")
 }
 
@@ -172,6 +179,6 @@ model UserNotification {
   user         User         @relation("ReceivedNotifications", fields: [userId], references: [id], onDelete: Cascade) // User 삭제 시 해당 알림 기록 삭제
 
   @@id([notificationId, userId]) // 복합 기본 키
-  @@index([userId, receivedAt]) // 사용자별 알림 조회 및 최신순 정렬
+  @@index([userId, receivedAt])  // 사용자별 알림 조회 및 최신순 정렬
   @@map("user_notifications")
 }
