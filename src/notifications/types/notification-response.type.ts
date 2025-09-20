@@ -13,7 +13,7 @@ type NotificationPayloadMap = {
   [NotificationType.NEW_POST_IN_GROUP]: { groupId: number; postId: number };
 };
 
-export type NotificationResponseDto =
+export type NotificationResponseType =
   | {
       [k in keyof NotificationPayloadMap]: BaseNotification & {
         payload: NotificationPayloadMap[k];
