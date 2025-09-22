@@ -34,12 +34,21 @@ export class OAuthService {
       : null;
 
     if (!user) {
-      const username = this.generateUsername(provider);
-      const resolvedDisplayName =
-        (displayName?.trim() && displayName.trim().slice(0, 50)) ||
-        (email
-          ? email.split('@')[0].slice(0, 50)
-          : `${provider.toString().toLowerCase()}_user`);
+      let username: string;
+      if (email) {
+        username = email.split('@')[0].slice(0, 20);
+      } else {
+        username = this.generateUsername(provider);
+      }
+      const resolvedDisplayName = (() => {
+        if (displayName) {
+          return displayName.trim().slice(0, 50);
+        }
+        if (email) {
+          return email.split('@')[0].slice(0, 50);
+        }
+        return `${provider.toString().toLowerCase()}_user`;
+      })();
       user = await this.usersService.createUser({
         username,
         name: resolvedDisplayName,

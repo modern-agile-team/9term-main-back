@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import { OAuthInput } from './interfaces/oauth.interface';
 import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/users.repository';
 import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { SignupRequestDto } from './dto/requests/signup-request.dto';
@@ -15,6 +16,7 @@ import { PasswordEncoderService } from './password-encoder.service';
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly passwordEncoderService: PasswordEncoderService,
@@ -51,8 +53,14 @@ export class AuthService {
     if (!user) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
     }
-    if (!user.password) {
+    const oauthAccounts = await this.usersRepository.findOAuthAccountsByUserId(
+      user.id,
+    );
+    if (oauthAccounts.length > 0) {
       throw new BadRequestException('이 계정은 소셜 로그인 전용입니다.');
+    }
+    if (!user.password) {
+      throw new BadRequestException('비밀번호가 설정되지 않은 계정입니다.');
     }
     const isMatch = await this.passwordEncoderService.compare(
       loginRequestDto.password,

@@ -12,6 +12,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findOAuthAccountsByUserId(userId: number): Promise<OAuthAccount[]> {
+    return this.prisma.oAuthAccount.findMany({ where: { userId } });
+  }
+
   async findByUsername(username: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { username } });
   }
