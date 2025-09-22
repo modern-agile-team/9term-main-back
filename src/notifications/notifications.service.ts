@@ -7,7 +7,7 @@ import {
   toNotificationResponseDto,
 } from './notifications.mapper';
 import { NotificationsRepository } from './notifications.repository';
-import { NotificationResponseDto } from './types/notification-response.type';
+import { NotificationResponseType } from './types/notification-response.type';
 import { NotificationSignal } from './types/notification-signal.type';
 
 @Injectable()
@@ -43,7 +43,7 @@ export class NotificationsService {
   // 특정 사용자의 알림 목록 조회
   async getUserNotifications(
     userId: number,
-  ): Promise<NotificationResponseDto[]> {
+  ): Promise<NotificationResponseType[]> {
     const userNotifications =
       await this.notificationsRepository.getNotificationsByUserId(userId);
 
