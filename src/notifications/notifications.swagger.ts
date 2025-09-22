@@ -189,6 +189,7 @@ export const ApiNotifications = {
         description: '사용자의 모든 알림을 읽음 처리합니다.',
       }),
       successResponseNoData('모든 알림이 성공적으로 읽음 처리되었습니다.'),
+      withUnauthorizedResponses(),
     ),
 
   delete: () =>
