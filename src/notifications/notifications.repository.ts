@@ -1,30 +1,51 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import {
+  NotificationType,
+  Notification as PrismaNotification,
+} from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class NotificationsRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async createJoinRequest(
+  async createJoinRequestNoti(
     senderId: number,
     groupId: number,
     message: string,
     managerIds: number[],
-  ): Promise<{ isRead: boolean; notification: any }> {
-    const notification = await this.prisma.notification.create({
+  ): Promise<PrismaNotification> {
+    return this.prisma.notification.create({
       data: {
         type: NotificationType.NEW_JOIN_REQUEST,
         senderId,
         groupId,
         message,
-        recipients: { create: managerIds.map((userId) => ({ userId })) },
+        recipients: {
+          create: managerIds.map((userId) => ({ userId })),
+        },
       },
     });
+  }
 
-    return {
-      isRead: false,
-      notification,
-    };
+  async createPostNoti(
+    senderId: number,
+    groupId: number,
+    postId: number,
+    message: string,
+    recipientIds: number[],
+  ): Promise<PrismaNotification> {
+    return this.prisma.notification.create({
+      data: {
+        type: NotificationType.NEW_POST_IN_GROUP,
+        senderId,
+        groupId,
+        postId,
+        message,
+        recipients: {
+          create: recipientIds.map((userId) => ({ userId })),
+        },
+      },
+    });
   }
 
   // 특정 유저의 특정 알림 조회
@@ -40,7 +61,7 @@ export class NotificationsRepository {
   }
 
   // 특정 유저의 모든 알림 가져오기
-  async getUserNotifications(userId: number): Promise<
+  async getNotificationsByUserId(userId: number): Promise<
     {
       isRead: boolean;
       notification: {
@@ -49,6 +70,7 @@ export class NotificationsRepository {
         message: string;
         senderId: number | null;
         groupId: number | null;
+        postId: number | null;
         createdAt: Date;
       };
     }[]
@@ -65,6 +87,7 @@ export class NotificationsRepository {
             message: true,
             senderId: true,
             groupId: true,
+            postId: true,
             createdAt: true,
           },
         },

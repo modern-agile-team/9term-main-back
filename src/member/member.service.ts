@@ -98,7 +98,7 @@ export class MembersService {
     const managerIds = managers.map((m) => m.userId);
 
     try {
-      await this.notificationsService.notifyJoinRequest(
+      await this.notificationsService.notifyByJoinRequest(
         { id: groupId, name: newMember.group.name },
         { id: userId, name: newMember.user.name },
         managerIds,

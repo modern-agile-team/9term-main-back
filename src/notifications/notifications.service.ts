@@ -1,11 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { josa } from 'josa';
 import { Observable, Subject } from 'rxjs';
+import { GroupsRepository } from 'src/groups/groups.repository';
 import {
   toFallbackNotification,
   toNotificationResponseDto,
 } from './notifications.mapper';
 import { NotificationsRepository } from './notifications.repository';
-import { NotificationResponseDto } from './types/notification-response.type';
+import { NotificationResponseType } from './types/notification-response.type';
 import { NotificationSignal } from './types/notification-signal.type';
 
 @Injectable()
@@ -18,6 +20,7 @@ export class NotificationsService {
 
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
+    private readonly groupsRepository: GroupsRepository,
   ) {}
 
   subscribeToUser(userId: number): Observable<NotificationSignal> {
@@ -30,6 +33,7 @@ export class NotificationsService {
   private sendNotification(recipientIds: number[]) {
     recipientIds.forEach((userId) => {
       const subject = this.userSubjects.get(userId);
+
       if (subject) {
         subject.next({ type: 'NEW_NOTIFICATION' });
       }
@@ -37,11 +41,11 @@ export class NotificationsService {
   }
 
   // 특정 사용자의 알림 목록 조회
-  async getNotificationsByUserId(
+  async getUserNotifications(
     userId: number,
-  ): Promise<NotificationResponseDto[]> {
+  ): Promise<NotificationResponseType[]> {
     const userNotifications =
-      await this.notificationsRepository.getUserNotifications(userId);
+      await this.notificationsRepository.getNotificationsByUserId(userId);
 
     return userNotifications.map((n) => {
       try {
@@ -56,12 +60,13 @@ export class NotificationsService {
 
   // 특정 알림 읽음 상태 변경
   async markAsRead(notificationId: number, userId: number): Promise<void> {
-    const result = await this.notificationsRepository.findUserNotification(
-      notificationId,
-      userId,
-    );
+    const notification =
+      await this.notificationsRepository.findUserNotification(
+        notificationId,
+        userId,
+      );
 
-    if (!result) {
+    if (!notification) {
       throw new NotFoundException('해당 알림을 찾을 수 없습니다.');
     }
     return await this.notificationsRepository.markAsRead(
@@ -97,24 +102,46 @@ export class NotificationsService {
   }
 
   // 가입 신청 알림 로직
-  async notifyJoinRequest(
+  async notifyByJoinRequest(
     group: { id: number; name: string },
     sender: { id: number; name: string },
     recipientIds: number[],
-  ): Promise<NotificationResponseDto> {
-    const message = `${sender.name}님이 ${group.name} 그룹 가입을 요청했습니다.`;
+  ): Promise<void> {
+    const message = `${sender.name}님이 '${group.name}' 그룹 가입을 요청했습니다.`;
 
     // DB 저장
-    const notification = await this.notificationsRepository.createJoinRequest(
+    await this.notificationsRepository.createJoinRequestNoti(
       sender.id,
       group.id,
       message,
       recipientIds,
     );
 
-    const response = toNotificationResponseDto(notification);
     this.sendNotification(recipientIds);
+  }
 
-    return response;
+  // 새 게시물 알림 로직
+  async notifyByNewPost(
+    post: { id: number; title: string; userId: number; groupId: number },
+    recipientIds: number[],
+  ): Promise<void> {
+    const group = await this.groupsRepository.findGroupById(post.groupId);
+    if (!group) {
+      throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
+    }
+
+    const message = josa(
+      `${group.name}에 새 게시물 '${post.title}'#{이} 등록되었습니다.`,
+    );
+
+    await this.notificationsRepository.createPostNoti(
+      post.userId,
+      post.groupId,
+      post.id,
+      message,
+      recipientIds,
+    );
+
+    this.sendNotification(recipientIds);
   }
 }
