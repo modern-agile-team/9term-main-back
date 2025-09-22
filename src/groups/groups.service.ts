@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { UserGroupRole } from '@prisma/client';
+import { GroupRecruitStatus, UserGroupRole } from '@prisma/client';
 
 import { GroupsRepository } from './groups.repository';
 import { MembersService } from '../member/member.service';
@@ -227,5 +227,19 @@ export class GroupsService {
     await this.s3Service
       .deleteAllByPrefixes([`group/${groupId}/`, `post/${groupId}/`])
       .catch(() => undefined);
+  }
+
+  async updateRecruitStatus(
+    groupId: number,
+    recruitStatus: GroupRecruitStatus,
+  ): Promise<void> {
+    const group = await this.groupsRepository.findGroupById(groupId);
+    if (!group) {
+      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
+    }
+
+    await this.groupsRepository.updateGroupById(groupId, {
+      recruitStatus,
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { UserGroupRole } from '@prisma/client';
+import { GroupRecruitStatus, UserGroupRole } from '@prisma/client';
 
 export interface CreateGroupInput {
   name: string;
@@ -18,6 +18,7 @@ export interface UpdateGroupInput {
   name?: string;
   description?: string;
   groupImgPath?: string;
+  recruitStatus?: GroupRecruitStatus;
 }
 
 export interface CreateGroupImageInput {

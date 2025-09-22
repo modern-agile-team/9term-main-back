@@ -1,6 +1,6 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
-import { NotificationResponseDto } from './types/notification-response.type';
+import { NotificationResponseType } from './types/notification-response.type';
 
 export function toNotificationResponseDto(entity: {
   isRead: boolean;
@@ -9,10 +9,11 @@ export function toNotificationResponseDto(entity: {
     type: NotificationType;
     message: string;
     senderId: number | null;
-    groupId: number | null;
+    groupId?: number | null;
+    postId?: number | null;
     createdAt: Date;
   };
-}): NotificationResponseDto {
+}): NotificationResponseType {
   const { notification, isRead } = entity;
 
   switch (notification.type) {
@@ -24,6 +25,18 @@ export function toNotificationResponseDto(entity: {
         createdAt: notification.createdAt,
         isRead,
         payload: { groupId: notification.groupId! },
+      };
+    case NotificationType.NEW_POST_IN_GROUP:
+      return {
+        id: notification.id,
+        type: notification.type,
+        message: notification.message,
+        createdAt: notification.createdAt,
+        isRead,
+        payload: {
+          groupId: notification.groupId!,
+          postId: notification.postId!,
+        },
       };
     default:
       throw new InternalServerErrorException(
@@ -40,7 +53,7 @@ export function toFallbackNotification(entity: {
     message: string;
     createdAt: Date;
   };
-}): NotificationResponseDto {
+}): NotificationResponseType {
   return {
     id: entity.notification.id,
     type: entity.notification.type,
