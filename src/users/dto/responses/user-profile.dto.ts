@@ -20,4 +20,7 @@ export class UserProfileDto {
     description: '프로필 이미지 URL',
   })
   profileImageUrl: string;
+
+  @Expose()
+  nameChangedAt?: string | null;
 }

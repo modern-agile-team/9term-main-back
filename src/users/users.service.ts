@@ -1,21 +1,22 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, User } from '@prisma/client';
+import { MembershipStatus, Prisma, User } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
-import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
 import { UserGroupSummaryDto } from 'src/users/dto/responses/user-group-summary.dto';
-import { MembershipStatus } from '@prisma/client';
+import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
   private readonly defaultImageKeys: string[];
+  private readonly NAME_CHANGE_INTERVAL_DAYS = 30;
 
   constructor(
     private readonly s3Service: S3Service,
@@ -33,18 +34,24 @@ export class UsersService {
     this.defaultImageKeys = defaultImagesString.split(',');
   }
 
-  private toUserProfileDto(user: User): UserProfileDto {
+  private toUserProfileDto(
+    user: User,
+    includeNameChangedAt = false,
+  ): UserProfileDto {
     const profileImageUrl = this.getProfileImageUrl(user);
 
-    return plainToInstance(
+    return plainToInstance<UserProfileDto, Record<string, unknown>>(
       UserProfileDto,
       {
         userId: user.id,
         name: user.name,
         username: user.username,
-        profileImageUrl: profileImageUrl,
+        profileImageUrl,
+        ...(includeNameChangedAt
+          ? { nameChangedAt: user.nameChangedAt ?? null }
+          : {}),
       },
-      { excludeExtraneousValues: true },
+      { excludeExtraneousValues: true, exposeUnsetFields: false },
     );
   }
 
@@ -97,7 +104,7 @@ export class UsersService {
 
   async getProfile(userId: number): Promise<UserProfileDto> {
     const user = await this.getUserOrThrow(userId);
-    return this.toUserProfileDto(user);
+    return this.toUserProfileDto(user, true);
   }
 
   async updateProfileImage(
@@ -153,6 +160,37 @@ export class UsersService {
     if (previousKey) {
       await this.deletePreviousProfileImage(previousKey);
     }
+
+    return this.toUserProfileDto(updatedUser);
+  }
+
+  async updateProfileName(
+    userId: number,
+    name: string,
+  ): Promise<UserProfileDto> {
+    const user = await this.getUserOrThrow(userId);
+
+    if (user.nameChangedAt) {
+      const nextAvailable = new Date(user.nameChangedAt as Date);
+      nextAvailable.setDate(
+        nextAvailable.getDate() + this.NAME_CHANGE_INTERVAL_DAYS,
+      );
+
+      if (new Date() < nextAvailable) {
+        throw new BadRequestException(
+          `이름은 최근 변경일로부터 ${this.NAME_CHANGE_INTERVAL_DAYS}일 이후에 다시 변경할 수 있습니다.`,
+        );
+      }
+    }
+
+    if (user.name === name) {
+      return this.toUserProfileDto(user);
+    }
+
+    const updatedUser = await this.usersRepository.updateUser(userId, {
+      name,
+      nameChangedAt: new Date(),
+    });
 
     return this.toUserProfileDto(updatedUser);
   }
