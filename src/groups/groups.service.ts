@@ -98,6 +98,7 @@ export class GroupsService {
             ...group,
             memberCount: group._count.userGroups,
             groupImageUrl: this.resolveGroupImageUrl(group.groupImgPath),
+            groupBannerUrl: this.resolveGroupImageUrl(group.groupBannerPath),
           },
           { excludeExtraneousValues: true },
         ),
@@ -115,11 +116,12 @@ export class GroupsService {
     }
 
     const groupImageUrl = this.resolveGroupImageUrl(group.groupImgPath);
+    const groupBannerUrl = this.resolveGroupImageUrl(group.groupBannerPath);
 
     if (!userId) {
       return plainToInstance(
         GroupJoinStatusDto,
-        { isJoined: false, role: null, groupImageUrl },
+        { isJoined: false, role: null, groupImageUrl, groupBannerUrl },
         { excludeExtraneousValues: true },
       );
     }
@@ -225,7 +227,11 @@ export class GroupsService {
     await this.groupsRepository.deleteGroupById(groupId);
 
     await this.s3Service
-      .deleteAllByPrefixes([`group/${groupId}/`, `post/${groupId}/`])
+      .deleteAllByPrefixes([
+        `group/${groupId}/`,
+        `post/${groupId}/`,
+        `groupBanner/${groupId}/`,
+      ])
       .catch(() => undefined);
   }
 
@@ -241,5 +247,45 @@ export class GroupsService {
     await this.groupsRepository.updateGroupById(groupId, {
       recruitStatus,
     });
+  }
+
+  async upsertGroupBanner(
+    groupId: number,
+    fileToUpload?: Express.Multer.File,
+  ): Promise<string | null> {
+    const group = await this.groupsRepository.findGroupById(groupId);
+    if (!group) {
+      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
+    }
+
+    const previousBannerKey = group.groupBannerPath ?? null;
+
+    if (!fileToUpload) {
+      await this.groupsRepository.updateGroupById(groupId, {
+        groupBannerPath: null,
+      } as UpdateGroupInput);
+
+      if (previousBannerKey) {
+        await this.s3Service
+          .deleteFile(previousBannerKey)
+          .catch(() => undefined);
+      }
+      return null;
+    }
+
+    const uploadedBannerKey = await this.s3Service.uploadFile(fileToUpload, {
+      type: S3ObjectType.GROUP_BANNER,
+      groupId,
+    });
+
+    await this.groupsRepository.updateGroupById(groupId, {
+      groupBannerPath: uploadedBannerKey,
+    } as UpdateGroupInput);
+
+    if (previousBannerKey) {
+      await this.s3Service.deleteFile(previousBannerKey).catch(() => undefined);
+    }
+
+    return this.s3Service.getFileUrl(uploadedBannerKey);
   }
 }

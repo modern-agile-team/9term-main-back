@@ -25,6 +25,7 @@ export class S3Service {
   private readonly folderMap: Record<S3ObjectType, string> = {
     [S3ObjectType.PROFILE]: 'profile/user_uploads/',
     [S3ObjectType.GROUP]: 'group/',
+    [S3ObjectType.GROUP_BANNER]: 'groupBanner/',
     [S3ObjectType.POST]: 'post/',
   };
 
@@ -69,6 +70,9 @@ export class S3Service {
           : `post/${uploadContext.groupId}/${uniqueId}${fileExtension}`;
       case S3ObjectType.PROFILE:
         return `profile/${uploadContext.userId}/${uniqueId}${fileExtension}`;
+      case S3ObjectType.GROUP_BANNER:
+        return `groupBanner/${uploadContext.groupId}/${uniqueId}${fileExtension}`;
+
       default:
         throw new InternalServerErrorException(
           '지원하지 않는 업로드 컨텍스트입니다.',

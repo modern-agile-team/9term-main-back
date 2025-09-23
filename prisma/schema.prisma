@@ -60,6 +60,7 @@ model Group {
   description   String?
   createdAt     DateTime          @default(now()) @map("created_at")
   groupImgPath  String?           @map("group_img_path") @db.VarChar(255)
+  groupBannerPath String?          @map("group_banner_path") @db.VarChar(255)
   posts         Post[]
   userGroups    UserGroup[]
   recruitStatus GroupRecruitStatus @default(OPEN)
