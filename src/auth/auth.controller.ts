@@ -15,9 +15,9 @@ import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { AuthService } from './auth.service';
 import { ApiAuth, AuthSwagger } from './auth.swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
-import { SignupRequestDto } from './dto/requests/signup-request.dto';
 import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
+import { SocialSignupRequestDto } from './dto/requests/social-signup-request.dto';
 
 @Controller('auth')
 @AuthSwagger()
@@ -41,19 +41,6 @@ export class AuthController {
     };
   }
 
-  @Post('signup')
-  @ApiAuth.signup()
-  async signup(
-    @Body() signupRequestDto: SignupRequestDto,
-  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
-    await this.authService.signup(signupRequestDto);
-    return {
-      status: 'success',
-      message: '회원가입에 성공했습니다.',
-      data: null,
-    };
-  }
-
   @Post('login')
   @ApiAuth.login()
   async login(
@@ -71,6 +58,23 @@ export class AuthController {
       data: {
         accessToken,
       },
+    };
+  }
+
+  @Post('social-signup')
+  async socialSignup(
+    @Body() dto: SocialSignupRequestDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
+    const { accessToken, refreshToken } =
+      await this.authService.socialSignupFinalize(dto);
+
+    res.cookie('refresh_token', refreshToken, this.getCookieOptions());
+
+    return {
+      status: 'success',
+      message: '소셜 회원가입에 성공했습니다.',
+      data: { accessToken },
     };
   }
 
@@ -124,8 +128,17 @@ export class AuthController {
       };
     },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
-    const tokens = await this.authService.oauthLogin({
+  ): Promise<
+    ApiResponseDto<
+      AuthTokenDataDto &
+        Partial<{
+          canSetCredentials: boolean;
+          provider: string;
+          providerId: string;
+        }>
+    >
+  > {
+    const result = await this.authService.oauthLogin({
       provider: OAuthProvider.GOOGLE,
       providerId: req.user.providerId,
       email: req.user.email,
@@ -133,13 +146,16 @@ export class AuthController {
       displayName: req.user.displayName,
     });
 
-    res.cookie('refresh_token', tokens.refreshToken, this.getCookieOptions());
+    res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
 
     return {
       status: 'success',
       message: '구글 로그인에 성공했습니다.',
       data: {
-        accessToken: tokens.accessToken,
+        accessToken: result.accessToken,
+        canSetCredentials: result.canSetCredentials,
+        provider: result.provider,
+        providerId: result.providerId,
       },
     };
   }

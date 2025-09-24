@@ -34,12 +34,8 @@ export class OAuthService {
       : null;
 
     if (!user) {
-      let username: string;
-      if (email) {
-        username = email.split('@')[0].slice(0, 20);
-      } else {
-        username = this.generateUsername(provider);
-      }
+      const preferredBase = email ? email.split('@')[0] : undefined;
+      const username = await this.pickUsername(preferredBase, provider);
       const resolvedDisplayName = (() => {
         if (displayName) {
           return displayName.trim().slice(0, 50);
@@ -72,5 +68,41 @@ export class OAuthService {
     const rand = Math.random().toString(36).slice(2, 10);
     const time = Date.now().toString(36).slice(-6);
     return `${prefix}_${time}${rand}`.slice(0, 20);
+  }
+
+  private async pickUsername(
+    preferredBase: string | undefined,
+    provider: OAuthProvider,
+  ): Promise<string> {
+    const sanitize = (s: string) =>
+      s
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '')
+        .slice(0, 20);
+
+    if (preferredBase) {
+      let base = sanitize(preferredBase);
+      if (base) {
+        let candidate = base;
+        for (let i = 0; i < 5; i++) {
+          const exists = await this.usersRepository.findByUsername(candidate);
+          if (!exists) return candidate;
+          const suf = Math.random().toString(36).slice(2, 6);
+          const sep = '-';
+          const head = base.slice(0, Math.max(0, 20 - sep.length - suf.length));
+          candidate = `${head}${sep}${suf}`;
+        }
+      }
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const candidate = this.generateUsername(provider);
+      const exists = await this.usersRepository.findByUsername(candidate);
+      if (!exists) return candidate;
+    }
+    throw new InternalServerErrorException(
+      '사용자 아이디 생성에 실패했습니다.',
+    );
   }
 }

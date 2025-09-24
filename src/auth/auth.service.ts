@@ -8,7 +8,7 @@ import { UsersService } from 'src/users/users.service';
 import { UsersRepository } from 'src/users/users.repository';
 import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
-import { SignupRequestDto } from './dto/requests/signup-request.dto';
+import { SocialSignupRequestDto } from './dto/requests/social-signup-request.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { PasswordEncoderService } from './password-encoder.service';
 
@@ -23,25 +23,6 @@ export class AuthService {
     private readonly oauthService: OAuthService,
   ) {}
 
-  // 회원가입
-  async signup(signupRequestDto: SignupRequestDto): Promise<void> {
-    const existingUser = await this.usersService.getUserByUsername(
-      signupRequestDto.username,
-    );
-    if (existingUser) {
-      throw new BadRequestException('이미 사용 중인 아이디입니다.');
-    }
-    const hashedPassword = await this.passwordEncoderService.hash(
-      signupRequestDto.password,
-    );
-
-    await this.usersService.createUser({
-      username: signupRequestDto.username,
-      name: signupRequestDto.name,
-      password: hashedPassword,
-    });
-  }
-
   // 로그인
   async login(loginRequestDto: LoginRequestDto): Promise<{
     accessToken: string;
@@ -52,12 +33,6 @@ export class AuthService {
     );
     if (!user) {
       throw new BadRequestException('아이디 또는 비밀번호가 틀렸습니다.');
-    }
-    const oauthAccounts = await this.usersRepository.findOAuthAccountsByUserId(
-      user.id,
-    );
-    if (oauthAccounts.length > 0) {
-      throw new BadRequestException('이 계정은 소셜 로그인 전용입니다.');
     }
     if (!user.password) {
       throw new BadRequestException('비밀번호가 설정되지 않은 계정입니다.');
@@ -93,14 +68,63 @@ export class AuthService {
     }
   }
 
-  async oauthLogin(
-    params: OAuthInput,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async oauthLogin(params: OAuthInput): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    canSetCredentials: boolean;
+    provider?: string;
+    providerId?: string;
+  }> {
     const user = await this.oauthService.resolveUser(params);
     if (!user) {
       throw new InternalServerErrorException('OAuth 처리 실패');
     }
-    return this.issueTokens(user);
+    const tokens = this.issueTokens(user);
+    const canSet = !user.password;
+    return {
+      ...tokens,
+      canSetCredentials: canSet,
+      provider: canSet ? params.provider : undefined,
+      providerId: canSet ? params.providerId : undefined,
+    };
+  }
+
+  async socialSignupFinalize(
+    dto: SocialSignupRequestDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const { provider, providerId, username, password, name } = dto;
+
+    const existing = await this.usersService.getUserByUsername(username);
+    if (existing) {
+      throw new BadRequestException('이미 사용 중인 아이디입니다.');
+    }
+
+    const account = await this.usersRepository.findOAuthAccount(
+      provider,
+      providerId,
+    );
+    if (!account) {
+      throw new BadRequestException('유효하지 않은 소셜 계정입니다.');
+    }
+
+    const user = await this.usersRepository.findUserById(account.userId);
+    if (!user) {
+      throw new InternalServerErrorException('사용자 정보를 찾을 수 없습니다.');
+    }
+
+    if (user.password) {
+      throw new BadRequestException('이미 사용자 비밀번호가 설정되었습니다.');
+    }
+
+    const hashed = await this.passwordEncoderService.hash(password);
+
+    const updated = await this.usersRepository.updateUser(user.id, {
+      username,
+      name: name ?? user.name,
+      password: hashed,
+    });
+
+    return this.issueTokens(updated);
   }
 
   private issueTokens(user: User): {
