@@ -22,5 +22,5 @@ export class UserProfileDto {
   profileImageUrl: string;
 
   @Expose()
-  nameChangedAt?: string | null;
+  nextAvailableDate?: Date | null;
 }

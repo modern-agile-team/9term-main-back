@@ -34,11 +34,52 @@ export class UsersService {
     this.defaultImageKeys = defaultImagesString.split(',');
   }
 
+  private getNextAvailableDate(nameChangedAt: Date | null): Date | null {
+    if (!nameChangedAt) {
+      return null;
+    }
+    const next = new Date(nameChangedAt);
+    next.setHours(0, 0, 0, 0);
+    next.setDate(next.getDate() + this.NAME_CHANGE_INTERVAL_DAYS);
+
+    return next;
+  }
+
+  private validateNameChange(user: User, newName: string): string | null {
+    const trimmedName = newName.trim();
+
+    if (trimmedName.length === 0) {
+      throw new BadRequestException('이름은 공백만으로 이루어질 수 없습니다.');
+    }
+
+    if (user.nameChangedAt) {
+      const nextAvailable = this.getNextAvailableDate(
+        user.nameChangedAt as Date | null,
+      );
+      if (nextAvailable && new Date() < nextAvailable) {
+        throw new BadRequestException(
+          `이름은 최근 변경일로부터 ${this.NAME_CHANGE_INTERVAL_DAYS}일 이후에 다시 변경할 수 있습니다.`,
+        );
+      }
+    }
+
+    if (user.name.trim() === trimmedName) {
+      return null;
+    }
+
+    return trimmedName;
+  }
+
   private toUserProfileDto(
     user: User,
-    includeNameChangedAt = false,
+    includeNextAvailableDate = false,
   ): UserProfileDto {
     const profileImageUrl = this.getProfileImageUrl(user);
+
+    const nextAvailableDate =
+      this.getNextAvailableDate(
+        user.nameChangedAt as Date | null,
+      )?.toISOString() ?? null;
 
     return plainToInstance<UserProfileDto, Record<string, unknown>>(
       UserProfileDto,
@@ -47,11 +88,9 @@ export class UsersService {
         name: user.name,
         username: user.username,
         profileImageUrl,
-        ...(includeNameChangedAt
-          ? { nameChangedAt: user.nameChangedAt ?? null }
-          : {}),
+        ...(includeNextAvailableDate ? { nextAvailableDate } : {}),
       },
-      { excludeExtraneousValues: true, exposeUnsetFields: false },
+      { excludeExtraneousValues: true },
     );
   }
 
@@ -169,30 +208,18 @@ export class UsersService {
     name: string,
   ): Promise<UserProfileDto> {
     const user = await this.getUserOrThrow(userId);
+    const trimmedName = this.validateNameChange(user, name);
 
-    if (user.nameChangedAt) {
-      const nextAvailable = new Date(user.nameChangedAt as Date);
-      nextAvailable.setDate(
-        nextAvailable.getDate() + this.NAME_CHANGE_INTERVAL_DAYS,
-      );
-
-      if (new Date() < nextAvailable) {
-        throw new BadRequestException(
-          `이름은 최근 변경일로부터 ${this.NAME_CHANGE_INTERVAL_DAYS}일 이후에 다시 변경할 수 있습니다.`,
-        );
-      }
-    }
-
-    if (user.name === name) {
+    if (trimmedName === null) {
       return this.toUserProfileDto(user);
     }
 
     const updatedUser = await this.usersRepository.updateUser(userId, {
-      name,
+      name: trimmedName,
       nameChangedAt: new Date(),
     });
 
-    return this.toUserProfileDto(updatedUser);
+    return this.toUserProfileDto(updatedUser, true);
   }
 
   async findMyGroups(

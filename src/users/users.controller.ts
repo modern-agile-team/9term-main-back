@@ -45,8 +45,8 @@ export class UsersController {
     };
   }
 
-  @Patch('me')
-  async updateMyName(
+  @Patch('me/name')
+  async updateProfileName(
     @Body() updateNameDto: UpdateNameDto,
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
@@ -65,7 +65,7 @@ export class UsersController {
   @Patch('me/image')
   @UseInterceptors(FileInterceptor('profileImage'))
   @ApiUsers.updateProfileImage()
-  async updateMyProfile(
+  async updateProfileImage(
     @UploadedFile() profileImage: Express.Multer.File,
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
