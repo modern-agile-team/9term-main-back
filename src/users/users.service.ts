@@ -34,10 +34,7 @@ export class UsersService {
     this.defaultImageKeys = defaultImagesString.split(',');
   }
 
-  private getNextAvailableDate(nameChangedAt: Date | null): Date | null {
-    if (!nameChangedAt) {
-      return null;
-    }
+  private getNextAvailableDate(nameChangedAt: Date): Date {
     const next = new Date(nameChangedAt);
     next.setHours(0, 0, 0, 0);
     next.setDate(next.getDate() + this.NAME_CHANGE_INTERVAL_DAYS);
@@ -53,10 +50,8 @@ export class UsersService {
     }
 
     if (user.nameChangedAt) {
-      const nextAvailable = this.getNextAvailableDate(
-        user.nameChangedAt as Date | null,
-      );
-      if (nextAvailable && new Date() < nextAvailable) {
+      const nextAvailable = this.getNextAvailableDate(user.nameChangedAt);
+      if (new Date() < nextAvailable) {
         throw new BadRequestException(
           `이름은 최근 변경일로부터 ${this.NAME_CHANGE_INTERVAL_DAYS}일 이후에 다시 변경할 수 있습니다.`,
         );
@@ -76,10 +71,9 @@ export class UsersService {
   ): UserProfileDto {
     const profileImageUrl = this.getProfileImageUrl(user);
 
-    const nextAvailableDate =
-      this.getNextAvailableDate(
-        user.nameChangedAt as Date | null,
-      )?.toISOString() ?? null;
+    const nextAvailableDate = user.nameChangedAt
+      ? this.getNextAvailableDate(user.nameChangedAt).toISOString()
+      : null;
 
     return plainToInstance<UserProfileDto, Record<string, unknown>>(
       UserProfileDto,
