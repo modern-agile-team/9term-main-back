@@ -185,7 +185,7 @@ export class GroupsController {
       },
     },
   })
-  async upsertGorupBanner(
+  async upsertGroupBanner(
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile?: Express.Multer.File,
   ): Promise<ApiResponseDto<GroupBannerUrlDto>> {

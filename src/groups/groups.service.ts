@@ -1,14 +1,12 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { GroupRecruitStatus, UserGroupRole } from '@prisma/client';
+import { GroupRecruitStatus } from '@prisma/client';
 
 import { GroupsRepository } from './groups.repository';
-import { MembersService } from '../member/member.service';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 
@@ -26,13 +24,25 @@ export class GroupsService {
 
   constructor(
     private readonly groupsRepository: GroupsRepository,
-    private readonly membersService: MembersService,
     private readonly s3Service: S3Service,
   ) {}
 
   private resolveGroupImageUrl(key?: string | null): string {
     const effectiveKey = key ?? GroupsService.DEFAULT_GROUP_IMAGE_KEY;
     return this.s3Service.getFileUrl(effectiveKey);
+  }
+
+  private async validateGroupExists(groupId: number): Promise<void> {
+    const group = await this.groupsRepository.findGroupById(groupId);
+    if (!group) {
+      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
+    }
+  }
+
+  private async safeDeleteS3File(key: string | null): Promise<void> {
+    if (key) {
+      await this.s3Service.deleteFile(key).catch(() => undefined);
+    }
   }
 
   async createGroup(
@@ -56,7 +66,7 @@ export class GroupsService {
     const createdGroup =
       await this.groupsRepository.createGroupWithAdmin(createData);
 
-    let uploadedImageKey: string | undefined;
+    let uploadedImageKey: string | null = null;
 
     try {
       if (fileToUpload) {
@@ -66,7 +76,7 @@ export class GroupsService {
         });
 
         await this.groupsRepository.updateGroupById(createdGroup.id, {
-          groupImgPath: uploadedImageKey,
+          groupImagePath: uploadedImageKey,
         });
       }
 
@@ -78,11 +88,7 @@ export class GroupsService {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      if (uploadedImageKey) {
-        await this.s3Service
-          .deleteFile(uploadedImageKey)
-          .catch(() => undefined);
-      }
+      await this.safeDeleteS3File(uploadedImageKey);
       throw error;
     }
   }
@@ -121,7 +127,13 @@ export class GroupsService {
     if (!userId) {
       return plainToInstance(
         GroupJoinStatusDto,
-        { isJoined: false, role: null, groupImageUrl, groupBannerUrl },
+        {
+          ...group,
+          isJoined: false,
+          role: null,
+          groupImageUrl,
+          groupBannerUrl,
+        },
         { excludeExtraneousValues: true },
       );
     }
@@ -134,6 +146,7 @@ export class GroupsService {
     return plainToInstance(
       GroupJoinStatusDto,
       {
+        ...group,
         isJoined: !!userGroup,
         role: userGroup?.role ?? null,
         groupImageUrl,
@@ -147,15 +160,7 @@ export class GroupsService {
     userId: number,
     updateGroupDto: UpdateGroupDto,
   ): Promise<GroupResponseDto> {
-    const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
-
-    const member = await this.groupsRepository.findGroupUser(groupId, userId);
-    if (!member || member.role !== UserGroupRole.MANAGER) {
-      throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
-    }
+    await this.validateGroupExists(groupId);
 
     const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
       ...updateGroupDto,
@@ -171,31 +176,22 @@ export class GroupsService {
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<GroupResponseDto> {
+    await this.validateGroupExists(groupId);
+
     const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
-
-    const member = await this.groupsRepository.findGroupUser(groupId, userId);
-    if (!member || member.role !== UserGroupRole.MANAGER) {
-      throw new ForbiddenException('그룹을 수정할 권한이 없습니다.');
-    }
-
-    const previousImageKey =
-      await this.groupsRepository.findGroupImagePath(groupId);
+    const previousImageKey = group!.groupImgPath;
 
     if (!fileToUpload) {
-      const cleared =
-        await this.groupsRepository.clearGroupImagePathIfPresent(groupId);
+      const updatedGroup = await this.groupsRepository.updateGroupById(
+        groupId,
+        {
+          groupImagePath: null,
+        },
+      );
 
-      if (cleared && previousImageKey) {
-        await this.s3Service
-          .deleteFile(previousImageKey)
-          .catch(() => undefined);
-      }
+      await this.safeDeleteS3File(previousImageKey);
 
-      const refreshedGroup = await this.groupsRepository.findGroupById(groupId);
-      return plainToInstance(GroupResponseDto, refreshedGroup, {
+      return plainToInstance(GroupResponseDto, updatedGroup, {
         excludeExtraneousValues: true,
       });
     }
@@ -206,12 +202,10 @@ export class GroupsService {
     });
 
     const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
-      groupImgPath: uploadedImageKey,
+      groupImagePath: uploadedImageKey,
     });
 
-    if (previousImageKey) {
-      await this.s3Service.deleteFile(previousImageKey).catch(() => undefined);
-    }
+    await this.safeDeleteS3File(previousImageKey);
 
     return plainToInstance(GroupResponseDto, updatedGroup, {
       excludeExtraneousValues: true,
@@ -258,18 +252,14 @@ export class GroupsService {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
 
-    const previousBannerKey = group.groupBannerPath ?? null;
+    const previousBannerKey = group.groupBannerPath;
 
     if (!fileToUpload) {
       await this.groupsRepository.updateGroupById(groupId, {
         groupBannerPath: null,
-      } as UpdateGroupInput);
+      });
 
-      if (previousBannerKey) {
-        await this.s3Service
-          .deleteFile(previousBannerKey)
-          .catch(() => undefined);
-      }
+      await this.safeDeleteS3File(previousBannerKey);
       return null;
     }
 
@@ -280,11 +270,9 @@ export class GroupsService {
 
     await this.groupsRepository.updateGroupById(groupId, {
       groupBannerPath: uploadedBannerKey,
-    } as UpdateGroupInput);
+    });
 
-    if (previousBannerKey) {
-      await this.s3Service.deleteFile(previousBannerKey).catch(() => undefined);
-    }
+    await this.safeDeleteS3File(previousBannerKey);
 
     return this.s3Service.getFileUrl(uploadedBannerKey);
   }

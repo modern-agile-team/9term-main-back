@@ -135,11 +135,11 @@ export class GroupsRepository {
   }
 
   async findGroupBannerPath(groupId: number): Promise<string | null> {
-    const g = await this.prisma.group.findUnique({
+    const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       select: { groupBannerPath: true },
     });
-    return g?.groupBannerPath ?? null;
+    return group?.groupBannerPath ?? null;
   }
 
   async clearGroupBannerPathIfPresent(groupId: number): Promise<boolean> {
