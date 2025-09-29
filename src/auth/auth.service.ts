@@ -5,10 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import { OAuthInput } from './interfaces/oauth.interface';
 import { UsersService } from 'src/users/users.service';
-import { UsersRepository } from 'src/users/users.repository';
 import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
-import { SocialSignupRequestDto } from './dto/requests/social-signup-request.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { PasswordEncoderService } from './password-encoder.service';
 
@@ -16,7 +14,6 @@ import { PasswordEncoderService } from './password-encoder.service';
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly passwordEncoderService: PasswordEncoderService,
@@ -87,44 +84,6 @@ export class AuthService {
       provider: canSet ? params.provider : undefined,
       providerId: canSet ? params.providerId : undefined,
     };
-  }
-
-  async socialSignupFinalize(
-    dto: SocialSignupRequestDto,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const { provider, providerId, username, password, name } = dto;
-
-    const existing = await this.usersService.getUserByUsername(username);
-    if (existing) {
-      throw new BadRequestException('이미 사용 중인 아이디입니다.');
-    }
-
-    const account = await this.usersRepository.findOAuthAccount(
-      provider,
-      providerId,
-    );
-    if (!account) {
-      throw new BadRequestException('유효하지 않은 소셜 계정입니다.');
-    }
-
-    const user = await this.usersRepository.findUserById(account.userId);
-    if (!user) {
-      throw new InternalServerErrorException('사용자 정보를 찾을 수 없습니다.');
-    }
-
-    if (user.password) {
-      throw new BadRequestException('이미 사용자 비밀번호가 설정되었습니다.');
-    }
-
-    const hashed = await this.passwordEncoderService.hash(password);
-
-    const updated = await this.usersRepository.updateUser(user.id, {
-      username,
-      name: name ?? user.name,
-      password: hashed,
-    });
-
-    return this.issueTokens(updated);
   }
 
   private issueTokens(user: User): {

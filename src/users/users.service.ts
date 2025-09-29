@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, User } from '@prisma/client';
+import { Prisma, User, OAuthProvider, OAuthAccount } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
@@ -31,6 +31,29 @@ export class UsersService {
       );
     }
     this.defaultImageKeys = defaultImagesString.split(',');
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findByEmail(email);
+  }
+
+  async updateUser(id: number, data: Prisma.UserUpdateInput): Promise<User> {
+    return this.usersRepository.updateUser(id, data);
+  }
+
+  async findOAuthAccount(
+    provider: OAuthProvider,
+    providerId: string,
+  ): Promise<OAuthAccount | null> {
+    return this.usersRepository.findOAuthAccount(provider, providerId);
+  }
+
+  async linkOAuthAccount(
+    userId: number,
+    provider: OAuthProvider,
+    providerId: string,
+  ): Promise<void> {
+    return this.usersRepository.linkOAuthAccount(userId, provider, providerId);
   }
 
   private toUserProfileDto(user: User): UserProfileDto {

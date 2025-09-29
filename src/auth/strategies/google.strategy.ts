@@ -44,7 +44,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     providerId: string;
     email?: string;
     emailVerified: boolean;
-    username: string;
     displayName?: string;
   }> {
     try {
@@ -65,7 +64,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     providerId: string;
     email?: string;
     emailVerified: boolean;
-    username: string;
     displayName?: string;
   } {
     if (!profile || profile.id == null) {
@@ -107,23 +105,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         ? displayNameUnknown.trim()
         : undefined;
 
-    let username: string;
-    if (email) {
-      username = email.split('@')[0];
-    } else if (displayName && displayName.length > 0) {
-      username = displayName.replace(/\s+/g, '.').toLowerCase();
-    } else {
-      username = providerId;
-    }
-
-    username = username.replace(/[^a-z0-9.]/gi, '').toLowerCase() || providerId;
-
     return {
       provider: OAuthProvider.GOOGLE,
       providerId,
       email,
       emailVerified,
-      username,
       displayName,
     };
   }

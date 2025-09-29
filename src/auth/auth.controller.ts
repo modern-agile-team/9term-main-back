@@ -17,7 +17,6 @@ import { ApiAuth, AuthSwagger } from './auth.swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
-import { SocialSignupRequestDto } from './dto/requests/social-signup-request.dto';
 
 @Controller('auth')
 @AuthSwagger()
@@ -58,23 +57,6 @@ export class AuthController {
       data: {
         accessToken,
       },
-    };
-  }
-
-  @Post('social-signup')
-  async socialSignup(
-    @Body() dto: SocialSignupRequestDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<ApiResponseDto<AuthTokenDataDto>> {
-    const { accessToken, refreshToken } =
-      await this.authService.socialSignupFinalize(dto);
-
-    res.cookie('refresh_token', refreshToken, this.getCookieOptions());
-
-    return {
-      status: 'success',
-      message: '소셜 회원가입에 성공했습니다.',
-      data: { accessToken },
     };
   }
 
