@@ -10,7 +10,11 @@ import {
   type PutObjectCommandInput,
   type S3ClientConfig,
 } from '@aws-sdk/client-s3';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +22,8 @@ import { S3ObjectType, type UploadContext } from './s3.types';
 
 @Injectable()
 export class S3Service {
+  private readonly logger = new Logger(S3Service.name);
+
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
   private readonly regionName: string;
@@ -72,7 +78,6 @@ export class S3Service {
         return `profile/${uploadContext.userId}/${uniqueId}${fileExtension}`;
       case S3ObjectType.GROUP_BANNER:
         return `groupBanner/${uploadContext.groupId}/${uniqueId}${fileExtension}`;
-
       default:
         throw new InternalServerErrorException(
           '지원하지 않는 업로드 컨텍스트입니다.',
@@ -96,11 +101,13 @@ export class S3Service {
         await this.s3Client.send(new PutObjectCommand(putParams));
         return objectKey;
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        throw new InternalServerErrorException(
-          `S3 업로드 실패: ${errorMessage}`,
-        );
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logger.error('S3 upload failed', {
+          bucket: this.bucketName,
+          key: objectKey,
+          msg,
+        });
+        throw new InternalServerErrorException(`S3 업로드 실패: ${msg}`);
       }
     }
 
@@ -122,9 +129,13 @@ export class S3Service {
       await this.s3Client.send(new PutObjectCommand(putParamsLegacy));
       return legacyKey;
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new InternalServerErrorException(`S3 업로드 실패: ${errorMessage}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error('S3 upload failed (legacy)', {
+        bucket: this.bucketName,
+        key: legacyKey,
+        msg,
+      });
+      throw new InternalServerErrorException(`S3 업로드 실패: ${msg}`);
     }
   }
 
@@ -140,9 +151,29 @@ export class S3Service {
     try {
       await this.s3Client.send(new DeleteObjectCommand(deleteParams));
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new InternalServerErrorException(`S3 삭제 실패: ${errorMessage}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error('S3 delete failed', {
+        bucket: this.bucketName,
+        key: objectKey,
+        msg,
+      });
+      throw new InternalServerErrorException(`S3 삭제 실패: ${msg}`);
+    }
+  }
+
+  async deleteFileSafe(objectKey?: string | null): Promise<boolean> {
+    if (!objectKey) {
+      return true;
+    }
+    try {
+      await this.deleteFile(objectKey);
+      return true;
+    } catch {
+      this.logger.warn('S3 delete suppressed (non-critical cleanup)', {
+        bucket: this.bucketName,
+        key: objectKey,
+      });
+      return false;
     }
   }
 
@@ -157,12 +188,22 @@ export class S3Service {
         .slice(i, i + batchSize)
         .map((key) => ({ Key: key }));
 
-      await this.s3Client.send(
-        new DeleteObjectsCommand({
-          Bucket: this.bucketName,
-          Delete: { Objects: chunk, Quiet: true },
-        }),
-      );
+      try {
+        await this.s3Client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucketName,
+            Delete: { Objects: chunk, Quiet: true },
+          }),
+        );
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logger.error('S3 batch delete failed', {
+          bucket: this.bucketName,
+          keys: chunk.map((c) => c.Key),
+          msg,
+        });
+        throw new InternalServerErrorException(`S3 일괄 삭제 실패: ${msg}`);
+      }
     }
   }
 
@@ -170,29 +211,50 @@ export class S3Service {
     let continuationToken: string | undefined;
 
     do {
-      const listedObjects: ListObjectsV2CommandOutput =
-        await this.s3Client.send(
+      let listedObjects: ListObjectsV2CommandOutput;
+      try {
+        listedObjects = await this.s3Client.send(
           new ListObjectsV2Command({
             Bucket: this.bucketName,
             Prefix: prefix,
             ContinuationToken: continuationToken,
           }),
         );
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logger.error('S3 list failed', {
+          bucket: this.bucketName,
+          prefix,
+          msg,
+        });
+        throw new InternalServerErrorException(`S3 목록 조회 실패: ${msg}`);
+      }
 
       const objectKeys = (listedObjects.Contents ?? [])
-        .map((object) => object.Key)
-        .filter((key): key is string => typeof key === 'string');
+        .map((o) => o.Key)
+        .filter((k): k is string => typeof k === 'string');
 
       if (objectKeys.length > 0) {
         const deleteTargets: ObjectIdentifier[] = objectKeys.map((key) => ({
           Key: key,
         }));
-        await this.s3Client.send(
-          new DeleteObjectsCommand({
-            Bucket: this.bucketName,
-            Delete: { Objects: deleteTargets, Quiet: true },
-          }),
-        );
+        try {
+          await this.s3Client.send(
+            new DeleteObjectsCommand({
+              Bucket: this.bucketName,
+              Delete: { Objects: deleteTargets, Quiet: true },
+            }),
+          );
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.error('S3 prefix delete failed', {
+            bucket: this.bucketName,
+            prefix,
+            count: deleteTargets.length,
+            msg,
+          });
+          throw new InternalServerErrorException(`S3 삭제 실패: ${msg}`);
+        }
       }
 
       continuationToken = listedObjects.IsTruncated
