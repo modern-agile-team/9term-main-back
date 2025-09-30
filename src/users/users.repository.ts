@@ -24,7 +24,7 @@ export class UsersRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findUserByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
@@ -54,22 +54,6 @@ export class UsersRepository {
       where: { provider_providerId: { provider, providerId } },
       create: { provider, providerId, user: { connect: { id: userId } } },
       update: {},
-    });
-  }
-
-  async createUserAndLinkOAuth(
-    userData: Prisma.UserCreateInput,
-    provider: OAuthProvider,
-    providerId: string,
-  ): Promise<User> {
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({ data: userData });
-      await tx.oAuthAccount.upsert({
-        where: { provider_providerId: { provider, providerId } },
-        create: { provider, providerId, user: { connect: { id: user.id } } },
-        update: {},
-      });
-      return user;
     });
   }
 

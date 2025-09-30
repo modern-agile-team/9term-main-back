@@ -114,7 +114,6 @@ export class AuthController {
     ApiResponseDto<
       AuthTokenDataDto &
         Partial<{
-          canSetCredentials: boolean;
           provider: string;
           providerId: string;
         }>
@@ -135,7 +134,6 @@ export class AuthController {
       message: '구글 로그인에 성공했습니다.',
       data: {
         accessToken: result.accessToken,
-        canSetCredentials: result.canSetCredentials,
         provider: result.provider,
         providerId: result.providerId,
       },

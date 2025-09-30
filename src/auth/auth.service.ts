@@ -68,7 +68,6 @@ export class AuthService {
   async oauthLogin(params: OAuthInput): Promise<{
     accessToken: string;
     refreshToken: string;
-    canSetCredentials: boolean;
     provider?: string;
     providerId?: string;
   }> {
@@ -80,7 +79,6 @@ export class AuthService {
     const canSet = !user.password;
     return {
       ...tokens,
-      canSetCredentials: canSet,
       provider: canSet ? params.provider : undefined,
       providerId: canSet ? params.providerId : undefined,
     };
