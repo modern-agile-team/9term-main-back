@@ -10,7 +10,10 @@ import { plainToInstance } from 'class-transformer';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 import { UserGroupSummaryDto } from 'src/users/dto/responses/user-group-summary.dto';
-import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
+import {
+  UserProfileDto,
+  UserProfileNextDateDto,
+} from 'src/users/dto/responses/user-profile.dto';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
@@ -65,24 +68,36 @@ export class UsersService {
     return trimmedName;
   }
 
-  private toUserProfileDto(
-    user: User,
-    includeNextAvailableDate = false,
-  ): UserProfileDto {
+  private toUserProfileDto(user: User): UserProfileDto {
     const profileImageUrl = this.getProfileImageUrl(user);
 
-    const nextAvailableDate = user.nameChangedAt
-      ? this.getNextAvailableDate(user.nameChangedAt).toISOString()
-      : null;
-
-    return plainToInstance<UserProfileDto, Record<string, unknown>>(
+    return plainToInstance(
       UserProfileDto,
       {
         userId: user.id,
         name: user.name,
         username: user.username,
         profileImageUrl,
-        ...(includeNextAvailableDate ? { nextAvailableDate } : {}),
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  private toUserProfileChangeDateDto(user: User): UserProfileNextDateDto {
+    const profileImageUrl = this.getProfileImageUrl(user);
+
+    const nextAvailableDate = user.nameChangedAt
+      ? this.getNextAvailableDate(user.nameChangedAt).toISOString()
+      : null;
+
+    return plainToInstance(
+      UserProfileNextDateDto,
+      {
+        userId: user.id,
+        name: user.name,
+        username: user.username,
+        profileImageUrl,
+        nextAvailableDate,
       },
       { excludeExtraneousValues: true },
     );
@@ -135,9 +150,9 @@ export class UsersService {
     return this.usersRepository.findUserById(id);
   }
 
-  async getProfile(userId: number): Promise<UserProfileDto> {
+  async getProfile(userId: number): Promise<UserProfileNextDateDto> {
     const user = await this.getUserOrThrow(userId);
-    return this.toUserProfileDto(user, true);
+    return this.toUserProfileChangeDateDto(user);
   }
 
   async updateProfileImage(
@@ -200,7 +215,7 @@ export class UsersService {
   async updateProfileName(
     userId: number,
     name: string,
-  ): Promise<UserProfileDto> {
+  ): Promise<UserProfileDto | UserProfileNextDateDto> {
     const user = await this.getUserOrThrow(userId);
     const trimmedName = this.validateNameChange(user, name);
 
@@ -213,7 +228,7 @@ export class UsersService {
       nameChangedAt: new Date(),
     });
 
-    return this.toUserProfileDto(updatedUser, true);
+    return this.toUserProfileChangeDateDto(updatedUser);
   }
 
   async findMyGroups(

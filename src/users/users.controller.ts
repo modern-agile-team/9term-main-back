@@ -46,6 +46,7 @@ export class UsersController {
   }
 
   @Patch('me/name')
+  @ApiUsers.updateProfileName()
   async updateProfileName(
     @Body() updateNameDto: UpdateNameDto,
     @User() user: AuthenticatedUserResponse,
