@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -16,12 +17,16 @@ import { OAuthInput } from 'src/auth/interfaces/oauth.interface';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 import { UserGroupSummaryDto } from 'src/users/dto/responses/user-group-summary.dto';
-import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
+import {
+  UserProfileDto,
+  UserProfileNextDateDto,
+} from 'src/users/dto/responses/user-profile.dto';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
   private readonly defaultImageKeys: string[];
+  private readonly NAME_CHANGE_INTERVAL_DAYS = 30;
 
   constructor(
     private readonly s3Service: S3Service,
@@ -37,6 +42,37 @@ export class UsersService {
       );
     }
     this.defaultImageKeys = defaultImagesString.split(',');
+  }
+
+  private getNextAvailableDate(nameChangedAt: Date): Date {
+    const next = new Date(nameChangedAt);
+    next.setHours(0, 0, 0, 0);
+    next.setDate(next.getDate() + this.NAME_CHANGE_INTERVAL_DAYS);
+
+    return next;
+  }
+
+  private validateNameChange(user: User, newName: string): string | null {
+    const trimmedName = newName.trim();
+
+    if (trimmedName.length === 0) {
+      throw new BadRequestException('이름은 공백만으로 이루어질 수 없습니다.');
+    }
+
+    if (user.nameChangedAt) {
+      const nextAvailable = this.getNextAvailableDate(user.nameChangedAt);
+      if (new Date() < nextAvailable) {
+        throw new BadRequestException(
+          `이름은 최근 변경일로부터 ${this.NAME_CHANGE_INTERVAL_DAYS}일 이후에 다시 변경할 수 있습니다.`,
+        );
+      }
+    }
+
+    if (user.name.trim() === trimmedName) {
+      return null;
+    }
+
+    return trimmedName;
   }
 
   // oauthinput을 받아 user 엔티티 반환 (없으면 생성, 있으면 이메일 검증 업데이트)
@@ -102,7 +138,27 @@ export class UsersService {
         userId: user.id,
         name: user.name,
         username: user.username,
-        profileImageUrl: profileImageUrl,
+        profileImageUrl,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  private toUserProfileChangeDateDto(user: User): UserProfileNextDateDto {
+    const profileImageUrl = this.getProfileImageUrl(user);
+
+    const nextAvailableDate = user.nameChangedAt
+      ? this.getNextAvailableDate(user.nameChangedAt).toISOString()
+      : null;
+
+    return plainToInstance(
+      UserProfileNextDateDto,
+      {
+        userId: user.id,
+        name: user.name,
+        username: user.username,
+        profileImageUrl,
+        nextAvailableDate,
       },
       { excludeExtraneousValues: true },
     );
@@ -164,9 +220,9 @@ export class UsersService {
     return this.usersRepository.findUserById(id);
   }
 
-  async getProfile(userId: number): Promise<UserProfileDto> {
+  async getProfile(userId: number): Promise<UserProfileNextDateDto> {
     const user = await this.getUserOrThrow(userId);
-    return this.toUserProfileDto(user);
+    return this.toUserProfileChangeDateDto(user);
   }
 
   async updateProfileImage(
@@ -224,6 +280,25 @@ export class UsersService {
     }
 
     return this.toUserProfileDto(updatedUser);
+  }
+
+  async updateProfileName(
+    userId: number,
+    name: string,
+  ): Promise<UserProfileDto | UserProfileNextDateDto> {
+    const user = await this.getUserOrThrow(userId);
+    const trimmedName = this.validateNameChange(user, name);
+
+    if (trimmedName === null) {
+      return this.toUserProfileDto(user);
+    }
+
+    const updatedUser = await this.usersRepository.updateUser(userId, {
+      name: trimmedName,
+      nameChangedAt: new Date(),
+    });
+
+    return this.toUserProfileChangeDateDto(updatedUser);
   }
 
   async findMyGroups(

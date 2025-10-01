@@ -21,3 +21,13 @@ export class UserProfileDto {
   })
   profileImageUrl: string;
 }
+
+export class UserProfileNextDateDto extends UserProfileDto {
+  @Expose()
+  @ApiProperty({
+    example: '2025-10-30T00:00:00.000Z',
+    description: '다음 이름 변경 가능일 (없을 경우 null)',
+    nullable: true,
+  })
+  nextAvailableDate: Date | null;
+}

@@ -8,11 +8,44 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { UserProfileDto } from './dto/responses/user-profile.dto';
-import { UserGroupSummaryDto } from './dto/responses/user-group-summary.dto';
 import { MembershipStatus } from '@prisma/client';
+import { UserGroupSummaryDto } from './dto/responses/user-group-summary.dto';
+import {
+  UserProfileDto,
+  UserProfileNextDateDto,
+} from './dto/responses/user-profile.dto';
 
-// 공통 Unauthorized
+// 응답 예시
+const successExamples = {
+  NameChanged: {
+    summary: '이름 변경 성공',
+    value: {
+      status: 'success',
+      message: '이름이 성공적으로 변경되었습니다.',
+      data: {
+        userId: 1,
+        name: '새로운닉네임',
+        username: 'user123',
+        profileImageUrl: 'https://example.com/profile/default_1.png',
+        nextAvailableDate: '2025-10-30T00:00:00.000Z',
+      },
+    },
+  },
+  NoChange: {
+    summary: '동일한 이름 입력 (변경 없음)',
+    value: {
+      status: 'success',
+      message: '이름이 성공적으로 변경되었습니다.',
+      data: {
+        userId: 1,
+        name: '기존닉네임',
+        username: 'user123',
+        profileImageUrl: 'https://example.com/profile/default_1.png',
+      },
+    },
+  },
+};
+
 const unauthorizedExamples = {
   TokenExpired: {
     message: '토큰이 만료되었습니다. 다시 로그인해주세요.',
@@ -26,7 +59,6 @@ const unauthorizedExamples = {
   },
 };
 
-// 공통 Not Found
 const notFoundExamples = {
   UserNotFound: {
     message: '존재하지 않는 사용자입니다.',
@@ -36,6 +68,16 @@ const notFoundExamples = {
 };
 
 const badRequestExamples = {
+  EmptyName: {
+    message: '이름은 공백만으로 이루어질 수 없습니다.',
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+  NameChangeRestricted: {
+    message: '이름은 최근 변경일로부터 30일 이후에 다시 변경할 수 있습니다.',
+    error: 'Bad Request',
+    statusCode: 400,
+  },
   FileRequired: {
     message: '프로필 이미지를 업데이트하려면 파일이 필요합니다.',
     error: 'Bad Request',
@@ -43,7 +85,7 @@ const badRequestExamples = {
   },
 };
 
-// 성공 응답
+// 응답 헬퍼 함수
 const ApiResponseWithData = <T extends Type<any>>(
   model: T,
   status = 200,
@@ -65,7 +107,6 @@ const ApiResponseWithData = <T extends Type<any>>(
   );
 };
 
-// 배열 데이터 응답
 const ApiArrayResponseWithData = <T extends Type<any>>(
   model: T,
   status = 200,
@@ -90,7 +131,6 @@ const ApiArrayResponseWithData = <T extends Type<any>>(
   );
 };
 
-// 클라이언트 요청 오류 응답
 const badRequestResponses = (examples: {
   [key: string]: { message: string; error: string; statusCode: number };
 }) =>
@@ -141,7 +181,6 @@ const unauthorizedResponses = (examples: {
     },
   });
 
-// 리소스 없음
 const notFoundResponses = (examples: {
   [key: string]: { message: string; error: string; statusCode: number };
 }) =>
@@ -167,6 +206,44 @@ const notFoundResponses = (examples: {
     },
   });
 
+const withSuccessResponses = <T extends Type<any>>(
+  model: T,
+  keys: (keyof typeof successExamples)[],
+  description = '성공 응답',
+) =>
+  applyDecorators(
+    ApiExtraModels(model),
+    ApiResponse({
+      status: 200,
+      description,
+      content: {
+        'application/json': {
+          schema: {
+            $ref: getSchemaPath(model),
+          },
+          examples: keys.reduce(
+            (acc, key) => {
+              acc[key] = successExamples[key];
+              return acc;
+            },
+            {} as Record<string, any>,
+          ),
+        },
+      },
+    }),
+  );
+
+const withBadRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
+  badRequestResponses(
+    keys.reduce(
+      (obj, key) => {
+        obj[key] = badRequestExamples[key];
+        return obj;
+      },
+      {} as Record<string, any>,
+    ),
+  );
+
 export const ApiUsers = {
   getProfile: () =>
     applyDecorators(
@@ -174,7 +251,25 @@ export const ApiUsers = {
         summary: '유저 프로필 조회',
         description: '로그인한 유저의 프로필 정보를 조회합니다.',
       }),
-      ApiResponseWithData(UserProfileDto, 200, '내 정보 조회 성공'),
+      ApiArrayResponseWithData(
+        UserProfileNextDateDto,
+        200,
+        '내 정보 조회 성공',
+      ),
+      unauthorizedResponses(unauthorizedExamples),
+      notFoundResponses(notFoundExamples),
+    ),
+
+  updateProfileName: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '유저 이름 수정',
+        description: `유저의 이름을 변경합니다.
+- 이름은 공백만으로 구성될 수 없으며  
+- 최근 변경일로부터 30일 이후에 다시 변경할 수 있습니다.`,
+      }),
+      withSuccessResponses(UserProfileNextDateDto, ['NameChanged', 'NoChange']),
+      withBadRequestResponses(['EmptyName', 'NameChangeRestricted']),
       unauthorizedResponses(unauthorizedExamples),
       notFoundResponses(notFoundExamples),
     ),
@@ -202,7 +297,7 @@ export const ApiUsers = {
         200,
         '프로필 이미지가 성공적으로 업데이트되었습니다.',
       ),
-      badRequestResponses(badRequestExamples),
+      withBadRequestResponses(['FileRequired']),
       unauthorizedResponses(unauthorizedExamples),
       notFoundResponses(notFoundExamples),
     ),

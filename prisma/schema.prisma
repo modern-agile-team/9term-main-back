@@ -53,6 +53,7 @@ model User {
   password       String?     @db.VarChar(60)
   name           String      @db.VarChar(50)
   profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
+  nameChangedAt         DateTime?          @map("name_changed_at")
   createdAt      DateTime    @default(now()) @map("created_at")
   comments       Comment[]
   postLikes      PostLike[]

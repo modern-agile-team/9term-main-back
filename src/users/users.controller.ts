@@ -1,25 +1,28 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
+  ParseEnumPipe,
   Patch,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { MembershipStatus } from '@prisma/client';
 import { User } from 'src/auth/user.decorator';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { CustomJwtAuthGuard } from '../auth/guards/access.guard';
 import { AuthenticatedUserResponse } from '../auth/interfaces/authenticated-user-response.interface';
-import { UserProfileDto } from './dto/responses/user-profile.dto';
+import { UpdateNameDto } from './dto/requests/update-profile.dto';
 import { UserGroupSummaryDto } from './dto/responses/user-group-summary.dto';
+import { UserProfileDto } from './dto/responses/user-profile.dto';
 import { UsersService } from './users.service';
 import { ApiUsers } from './users.swagger';
-import { MembershipStatus } from '@prisma/client';
-import { ParseEnumPipe, Query } from '@nestjs/common';
 
 @ApiTags('Users')
 @Controller('users')
@@ -42,10 +45,28 @@ export class UsersController {
     };
   }
 
+  @Patch('me/name')
+  @ApiUsers.updateProfileName()
+  async updateProfileName(
+    @Body() updateNameDto: UpdateNameDto,
+    @User() user: AuthenticatedUserResponse,
+  ): Promise<ApiResponseDto<UserProfileDto>> {
+    const updatedUser = await this.usersService.updateProfileName(
+      user.userId,
+      updateNameDto.name,
+    );
+
+    return {
+      status: 'success',
+      message: '이름이 성공적으로 변경되었습니다.',
+      data: updatedUser,
+    };
+  }
+
   @Patch('me/image')
   @UseInterceptors(FileInterceptor('profileImage'))
   @ApiUsers.updateProfileImage()
-  async updateMyProfile(
+  async updateProfileImage(
     @UploadedFile() profileImage: Express.Multer.File,
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<UserProfileDto>> {
