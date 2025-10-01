@@ -25,6 +25,12 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+
+enum OAuthProvider {
+  GOOGLE
+  KAKAO
+}
+
 enum GroupRecruitStatus {
   OPEN
   ALWAYS_OPEN
@@ -34,24 +40,45 @@ enum GroupRecruitStatus {
 enum NotificationType {
   NEW_JOIN_REQUEST
   NEW_POST_IN_GROUP
+
 }
 
 //// ===== Models =====
 model User {
-  id                    Int                @id @default(autoincrement())
-  username              String             @unique @map("user_name") @db.VarChar(20)
-  password              String             @db.VarChar(60)
-  name                  String             @db.VarChar(50)
-  profileImgPath        String?            @map("profile_img_path") @db.VarChar(255)
-  createdAt             DateTime           @default(now()) @map("created_at")
-  comments              Comment[]
-  postLikes             PostLike[]
-  posts                 Post[]
-  userGroups            UserGroup[]
+
+  id             Int         @id @default(autoincrement())
+  username       String      @unique @map("user_name") @db.VarChar(20)
+  email          String?     @unique @db.VarChar(255)
+  emailVerified  Boolean     @default(false)
+  password       String?     @db.VarChar(60)
+  name           String      @db.VarChar(50)
+  profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  comments       Comment[]
+  postLikes      PostLike[]
+  posts          Post[]
+  userGroups     UserGroup[]
+  oauthAccounts  OAuthAccount[]
   receivedNotifications UserNotification[] @relation("ReceivedNotifications")
   sentNotifications     Notification[]     @relation("SentNotifications")
 
+
   @@map("users")
+}
+
+model OAuthAccount {
+  id          Int            @id @default(autoincrement())
+  userId      Int            @map("user_id")
+  provider    OAuthProvider  // enum 타입으로 변경
+  providerId  String         @db.VarChar(50) @map("provider_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Group {

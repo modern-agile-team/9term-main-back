@@ -4,13 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, User } from '@prisma/client';
+import {
+  MembershipStatus,
+  OAuthAccount,
+  OAuthProvider,
+  Prisma,
+  User,
+} from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
+import { OAuthInput } from 'src/auth/interfaces/oauth.interface';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
-import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
 import { UserGroupSummaryDto } from 'src/users/dto/responses/user-group-summary.dto';
-import { MembershipStatus } from '@prisma/client';
+import { UserProfileDto } from 'src/users/dto/responses/user-profile.dto';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
@@ -31,6 +37,60 @@ export class UsersService {
       );
     }
     this.defaultImageKeys = defaultImagesString.split(',');
+  }
+
+  // oauthinput을 받아 user 엔티티 반환 (없으면 생성, 있으면 이메일 검증 업데이트)
+  async getOrCreateUserFromOAuth(input: OAuthInput): Promise<User> {
+    const { provider, providerId, email, emailVerified, displayName } = input;
+
+    const user = email ? await this.findByEmail(email) : null;
+
+    if (!user) {
+      const username = this.generateUsername(provider, providerId);
+      const resolvedDisplayName =
+        displayName?.trim().slice(0, 50) ??
+        email?.split('@')[0].slice(0, 50) ??
+        `${provider.toString().toLowerCase()}_user`;
+
+      return await this.createUser({
+        username,
+        name: resolvedDisplayName,
+        email: email ?? null,
+        emailVerified,
+        password: null,
+      });
+    }
+
+    if (emailVerified && !user.emailVerified) {
+      return await this.updateUser(user.id, { emailVerified: true });
+    }
+
+    // dead code: 이미 prisma에서 create 했으므로 null을 반환할 수 없어서 삭제함 (20250930)
+
+    return user;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findUserByEmail(email);
+  }
+
+  async updateUser(id: number, data: Prisma.UserUpdateInput): Promise<User> {
+    return this.usersRepository.updateUser(id, data);
+  }
+
+  async findOAuthAccount(
+    provider: OAuthProvider,
+    providerId: string,
+  ): Promise<OAuthAccount | null> {
+    return this.usersRepository.findOAuthAccount(provider, providerId);
+  }
+
+  async linkOAuthAccount(
+    userId: number,
+    provider: OAuthProvider,
+    providerId: string,
+  ): Promise<void> {
+    return this.usersRepository.linkOAuthAccount(userId, provider, providerId);
   }
 
   private toUserProfileDto(user: User): UserProfileDto {
@@ -55,6 +115,15 @@ export class UsersService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
     return user;
+  }
+
+  private generateUsername(
+    provider: OAuthProvider,
+    providerId: string,
+  ): string {
+    const prefix = provider.toString().toLowerCase();
+    const suffix = providerId.slice(-8);
+    return `${prefix}_user${suffix}`;
   }
 
   private getRandomDefaultImageKey(): string {
