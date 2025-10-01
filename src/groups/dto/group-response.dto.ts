@@ -23,4 +23,7 @@ export class GroupResponseDto {
   })
   @Expose()
   createdAt: Date;
+
+  @Expose()
+  groupBannerUrl: string | null;
 }

@@ -25,39 +25,74 @@ enum PostCategory {
   ANNOUNCEMENT
 }
 
+
+enum OAuthProvider {
+  GOOGLE
+  KAKAO
+}
+
+enum GroupRecruitStatus {
+  OPEN
+  ALWAYS_OPEN
+  CLOSED
+}
+
 enum NotificationType {
   NEW_JOIN_REQUEST
   NEW_POST_IN_GROUP
+
 }
 
 //// ===== Models =====
 model User {
-  id                    Int                @id @default(autoincrement())
-  username              String             @unique @map("user_name") @db.VarChar(20)
-  password              String             @db.VarChar(60)
-  name                  String             @db.VarChar(50)
-  profileImgPath        String?            @map("profile_img_path") @db.VarChar(255)
+
+  id             Int         @id @default(autoincrement())
+  username       String      @unique @map("user_name") @db.VarChar(20)
+  email          String?     @unique @db.VarChar(255)
+  emailVerified  Boolean     @default(false)
+  password       String?     @db.VarChar(60)
+  name           String      @db.VarChar(50)
+  profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
   nameChangedAt         DateTime?          @map("name_changed_at")
-  createdAt             DateTime           @default(now()) @map("created_at")
-  comments              Comment[]
-  postLikes             PostLike[]
-  posts                 Post[]
-  userGroups            UserGroup[]
+  createdAt      DateTime    @default(now()) @map("created_at")
+  comments       Comment[]
+  postLikes      PostLike[]
+  posts          Post[]
+  userGroups     UserGroup[]
+  oauthAccounts  OAuthAccount[]
   receivedNotifications UserNotification[] @relation("ReceivedNotifications")
   sentNotifications     Notification[]     @relation("SentNotifications")
+
 
   @@map("users")
 }
 
+model OAuthAccount {
+  id          Int            @id @default(autoincrement())
+  userId      Int            @map("user_id")
+  provider    OAuthProvider  // enum 타입으로 변경
+  providerId  String         @db.VarChar(50) @map("provider_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
 model Group {
-  id            Int            @id @default(autoincrement())
-  name          String         @db.VarChar(100)
-  description   String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  groupImgPath  String?        @map("group_img_path") @db.VarChar(255)
-  posts         Post[]
-  userGroups    UserGroup[]
-  notifications Notification[]
+  id              Int                @id @default(autoincrement())
+  name            String             @db.VarChar(100)
+  description     String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  groupImgPath    String?            @map("group_img_path") @db.VarChar(255)
+  groupBannerPath String?            @map("group_banner_path") @db.VarChar(255)
+  posts           Post[]
+  userGroups      UserGroup[]
+  recruitStatus   GroupRecruitStatus @default(OPEN)
+  notifications   Notification[]
 
   @@map("groups")
 }
@@ -77,8 +112,8 @@ model UserGroup {
   @@unique([userId, groupId])
   @@index([groupId, status]) // 특정 그룹의 멤버 상태별 조회 (예: 가입 대기 멤버)
   @@index([userId, status]) // 특정 유저의 가입 그룹 상태별 조회 (예: 유저가 가입 대기 중인 그룹)
-  @@index([groupId]) // 특정 그룹의 모든 멤버를 조회할 때 (status 필터링 없이)
-  @@index([userId]) // 특정 유저가 속한 모든 그룹을 조회할 때 (status 필터링 없이)
+  @@index([groupId]) // 특정 그룹의 모든 멤버 조회 (status 필터링 없이)
+  @@index([userId]) // 특정 유저가 속한 모든 그룹 조회 (status 필터링 없이)
   @@map("user_groups")
 }
 

@@ -133,4 +133,20 @@ export class GroupsRepository {
       where: { id: groupId },
     });
   }
+
+  async findGroupBannerPath(groupId: number): Promise<string | null> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { groupBannerPath: true },
+    });
+    return group?.groupBannerPath ?? null;
+  }
+
+  async clearGroupBannerPathIfPresent(groupId: number): Promise<boolean> {
+    await this.prisma.group.update({
+      where: { id: groupId },
+      data: { groupBannerPath: null },
+    });
+    return true;
+  }
 }

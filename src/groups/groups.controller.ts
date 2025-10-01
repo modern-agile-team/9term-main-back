@@ -12,13 +12,14 @@ import {
   Put,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { GroupBannerUrlDto } from './dto/group-banner-url.dto';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { ApiGroups } from './group.swagger';
@@ -27,6 +28,7 @@ import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { User } from 'src/auth/user.decorator';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { GroupManagerGuard } from 'src/member/guards/group-manager.guard';
+import { UpdateRecruitStatusDto } from './dto/update-recruit.dto';
 
 @ApiTags('Groups')
 @Controller('groups')
@@ -153,6 +155,51 @@ export class GroupsController {
       status: 'success',
       message: '그룹이 성공적으로 삭제되었습니다.',
       data: null,
+    };
+  }
+
+  @Patch(':groupId/recruitment')
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @ApiBearerAuth()
+  @ApiGroups.updateRecruitment()
+  async updateRecruitStatus(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Body() updateRecruitStatusDto: UpdateRecruitStatusDto,
+  ): Promise<void> {
+    return this.groupsService.updateRecruitStatus(
+      groupId,
+      updateRecruitStatusDto.recruitStatus,
+    );
+  }
+
+  @Put(':groupId/image/banner')
+  @ApiBearerAuth()
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @UseInterceptors(FileInterceptor('groupBannerImage'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        groupBannerImage: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  async upsertGroupBanner(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @UploadedFile() uploadFile?: Express.Multer.File,
+  ): Promise<ApiResponseDto<GroupBannerUrlDto>> {
+    const bannerImageUrl = await this.groupsService.upsertGroupBanner(
+      groupId,
+      uploadFile,
+    );
+
+    return {
+      status: 'success',
+      message: uploadFile
+        ? '그룹 배너 이미지가 성공적으로 변경되었습니다.'
+        : '그룹 배너 이미지가 성공적으로 제거되었습니다.',
+      data: { bannerImageUrl },
     };
   }
 }

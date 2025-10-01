@@ -8,6 +8,6 @@ import { UsersService } from './users.service';
   imports: [S3Module],
   controllers: [UsersController],
   providers: [UsersService, UsersRepository],
-  exports: [UsersService, UsersRepository],
+  exports: [UsersService],
 })
 export class UsersModule {}
