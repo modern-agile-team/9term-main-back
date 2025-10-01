@@ -22,5 +22,5 @@ export class GroupJoinStatusDto {
   groupImageUrl: string;
 
   @Expose()
-  groupBannerUrl: UserGroupRole | null;
+  groupBannerUrl: string | null;
 }

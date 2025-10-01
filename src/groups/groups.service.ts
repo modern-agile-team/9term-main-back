@@ -76,7 +76,7 @@ export class GroupsService {
         });
 
         await this.groupsRepository.updateGroupById(createdGroup.id, {
-          groupImagePath: uploadedImageKey,
+          groupImgPath: uploadedImageKey,
         });
       }
 
@@ -185,7 +185,7 @@ export class GroupsService {
       const updatedGroup = await this.groupsRepository.updateGroupById(
         groupId,
         {
-          groupImagePath: null,
+          groupImgPath: null,
         },
       );
 
@@ -202,7 +202,7 @@ export class GroupsService {
     });
 
     const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
-      groupImagePath: uploadedImageKey,
+      groupImgPath: uploadedImageKey,
     });
 
     await this.safeDeleteS3File(previousImageKey);

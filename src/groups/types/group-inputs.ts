@@ -17,7 +17,7 @@ export interface GroupUserInput {
 export interface UpdateGroupInput {
   name?: string;
   description?: string;
-  groupImagePath?: string | null;
+  groupImgPath?: string | null;
   recruitStatus?: GroupRecruitStatus;
   groupBannerPath?: string | null;
 }
