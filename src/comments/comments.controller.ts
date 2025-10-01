@@ -8,13 +8,13 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
-import { Request } from 'express';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
+import { AuthenticatedUserResponse } from 'src/auth/interfaces/authenticated-user-response.interface';
+import { User } from 'src/auth/user.decorator';
 import { GroupMemberGuard } from 'src/member/guards/group-member.guard';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ApiComments } from './comment.swagger';
@@ -37,13 +37,11 @@ export class CommentsController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
     @Body() createCommentDto: CreateCommentDto,
-    @Req() req: Request,
+    @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<ResCommentDto>> {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
     const created = await this.commentsService.createComment(
       createCommentDto,
-      userId,
+      user.userId,
       postId,
       groupId,
     );
@@ -85,14 +83,12 @@ export class CommentsController {
     @Param('postId', ParseIntPipe) postId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCommentDto: UpdateCommentDto,
-    @Req() req: Request,
+    @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<ResCommentDto>> {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
     const updated = await this.commentsService.updateComment(
       id,
       updateCommentDto,
-      userId,
+      user.userId,
       groupId,
       postId,
     );
@@ -112,11 +108,9 @@ export class CommentsController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('postId', ParseIntPipe) postId: number,
     @Param('id', ParseIntPipe) id: number,
-    @Req() req: Request,
+    @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<null>> {
-    const user = req.user as { userId: number };
-    const userId = user.userId;
-    await this.commentsService.deleteComment(id, userId, groupId, postId);
+    await this.commentsService.deleteComment(id, user.userId, groupId, postId);
     return {
       status: 'success',
       message: '댓글이 성공적으로 삭제되었습니다.',

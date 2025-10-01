@@ -3,6 +3,7 @@ import { Post, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreatePostData,
+  PostGroupInfo,
   PostWithUserAndCountRaw,
   UpdatePostData,
 } from './interfaces/post.interface';
@@ -102,6 +103,13 @@ export class PostsRepository {
           select: { postImgPath: true },
         },
       },
+    });
+  }
+
+  async findGroupByPostId(id: number): Promise<PostGroupInfo | null> {
+    return await this.prisma.post.findUnique({
+      where: { id },
+      select: { id: true, groupId: true },
     });
   }
 }

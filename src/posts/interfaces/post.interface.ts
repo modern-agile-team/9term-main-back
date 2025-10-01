@@ -39,6 +39,11 @@ export interface PostWithUserAndCountRaw extends PostWithUser {
   postImages: PostImageLite[];
 }
 
+export interface PostGroupInfo {
+  id: number;
+  groupId: number;
+}
+
 export interface PostSummary extends Post {
   user: PostUserView;
   commentsCount: number;
