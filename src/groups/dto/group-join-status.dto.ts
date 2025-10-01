@@ -20,4 +20,7 @@ export class GroupJoinStatusDto {
 
   @Expose()
   groupImageUrl: string;
+
+  @Expose()
+  groupBannerUrl: string | null;
 }

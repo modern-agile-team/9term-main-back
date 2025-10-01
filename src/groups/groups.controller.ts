@@ -12,13 +12,14 @@ import {
   Put,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
 import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { GroupBannerUrlDto } from './dto/group-banner-url.dto';
 import { CustomJwtAuthGuard } from 'src/auth/guards/access.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import { ApiGroups } from './group.swagger';
@@ -169,5 +170,36 @@ export class GroupsController {
       groupId,
       updateRecruitStatusDto.recruitStatus,
     );
+  }
+
+  @Put(':groupId/image/banner')
+  @ApiBearerAuth()
+  @UseGuards(CustomJwtAuthGuard, GroupManagerGuard)
+  @UseInterceptors(FileInterceptor('groupBannerImage'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        groupBannerImage: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  async upsertGroupBanner(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @UploadedFile() uploadFile?: Express.Multer.File,
+  ): Promise<ApiResponseDto<GroupBannerUrlDto>> {
+    const bannerImageUrl = await this.groupsService.upsertGroupBanner(
+      groupId,
+      uploadFile,
+    );
+
+    return {
+      status: 'success',
+      message: uploadFile
+        ? '그룹 배너 이미지가 성공적으로 변경되었습니다.'
+        : '그룹 배너 이미지가 성공적으로 제거되었습니다.',
+      data: { bannerImageUrl },
+    };
   }
 }
