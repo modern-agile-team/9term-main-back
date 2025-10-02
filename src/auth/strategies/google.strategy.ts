@@ -8,6 +8,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile, StrategyOptions } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
 import { OAuthProvider } from '@prisma/client';
+import { OAuthInput } from 'src/auth/interfaces/oauth.interface';
 
 type GoogleEmailLike = { value?: unknown; verified?: unknown };
 
@@ -39,13 +40,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     _accessToken: string,
     _refreshToken: string,
     profile: Profile,
-  ): Promise<{
-    provider: OAuthProvider;
-    providerId: string;
-    email?: string;
-    emailVerified: boolean;
-    displayName?: string;
-  }> {
+  ): Promise<OAuthInput> {
     try {
       return this.parseGoogleProfile(profile);
     } catch (err) {
@@ -59,13 +54,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     }
   }
 
-  private parseGoogleProfile(profile: Profile): {
-    provider: OAuthProvider;
-    providerId: string;
-    email?: string;
-    emailVerified: boolean;
-    displayName?: string;
-  } {
+  private parseGoogleProfile(profile: Profile): OAuthInput {
     if (!profile || profile.id == null) {
       throw new TypeError('Missing profile.id');
     }
@@ -74,12 +63,25 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
     const emailsAny = profile.emails as unknown;
     if (Array.isArray(emailsAny) && emailsAny.length > 0) {
-      const first = emailsAny[0] as unknown;
-      if (isGoogleEmailLike(first)) {
-        const rawEmail = first.value;
-        email = rawEmail.trim().toLowerCase();
-        if (typeof first.verified === 'boolean') {
-          emailVerified = first.verified;
+      let picked: { value: string; verified?: boolean } | undefined;
+      for (const item of emailsAny as unknown[]) {
+        if (isGoogleEmailLike(item) && item.verified === true) {
+          picked = item;
+          break;
+        }
+      }
+      if (!picked) {
+        for (const item of emailsAny as unknown[]) {
+          if (isGoogleEmailLike(item)) {
+            picked = item;
+            break;
+          }
+        }
+      }
+      if (picked) {
+        email = picked.value.trim().toLowerCase();
+        if (typeof picked.verified === 'boolean') {
+          emailVerified = picked.verified;
         }
       }
     }
