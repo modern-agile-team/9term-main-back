@@ -10,6 +10,7 @@ import { PostsRepository } from 'src/posts/posts.repository';
 import { CommentsRepository } from './comments.repository';
 import { CreateCommentDto } from './dto/requests/create-comment.dto';
 import { UpdateCommentDto } from './dto/requests/update-comment.dto';
+import { CommentWithAuthor } from './interfaces/comment.interface';
 import { ICommentsService } from './interfaces/comments.service.interface';
 
 @Injectable()
@@ -54,7 +55,7 @@ export class CommentsService implements ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: { id: number; name: string } })[]> {
+  ): Promise<CommentWithAuthor[]> {
     await this.verifyPostAndGroup(postId, groupId);
 
     if (parentId) {
