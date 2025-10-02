@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Comment } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CommentWithAuthor } from './interfaces/comment.interface';
 import { ICommentsRepository } from './interfaces/comments.repository.interface';
 
 @Injectable()
@@ -30,7 +31,7 @@ export class CommentsRepository implements ICommentsRepository {
   findComments(
     postId: number,
     parentId: number | null = null,
-  ): Promise<(Comment & { user: { id: number; name: string } })[]> {
+  ): Promise<CommentWithAuthor[]> {
     return this.prisma.comment.findMany({
       where: { postId, parentId },
       orderBy: { createdAt: 'asc' }, // 댓글 오름차순 정렬

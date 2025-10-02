@@ -4,18 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Comment, Post } from '@prisma/client';
+import { Comment } from '@prisma/client';
+import { PostGroupInfo } from 'src/posts/interfaces/post.interface';
 import { PostsRepository } from 'src/posts/posts.repository';
 import { CommentsRepository } from './comments.repository';
 import { CreateCommentDto } from './dto/requests/create-comment.dto';
 import { UpdateCommentDto } from './dto/requests/update-comment.dto';
+import { CommentWithAuthor } from './interfaces/comment.interface';
 import { ICommentsService } from './interfaces/comments.service.interface';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
   constructor(
-    private readonly commentsRepo: CommentsRepository,
-    private readonly postsRepo: PostsRepository,
+    private readonly commentsRepository: CommentsRepository,
+    private readonly postsRepository: PostsRepository,
   ) {}
 
   // 댓글 생성 (부모 댓글이 있을 경우 parentId 설정)
@@ -37,7 +39,7 @@ export class CommentsService implements ICommentsService {
       }
     }
 
-    const newComment = await this.commentsRepo.createComment({
+    const newComment = await this.commentsRepository.createComment({
       content,
       userId,
       postId,
@@ -53,14 +55,17 @@ export class CommentsService implements ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: { id: number; name: string } })[]> {
+  ): Promise<CommentWithAuthor[]> {
     await this.verifyPostAndGroup(postId, groupId);
 
     if (parentId) {
       await this.verifyParentComment(parentId, postId);
     }
 
-    const comments = await this.commentsRepo.findComments(postId, parentId);
+    const comments = await this.commentsRepository.findComments(
+      postId,
+      parentId,
+    );
 
     return comments;
   }
@@ -81,7 +86,7 @@ export class CommentsService implements ICommentsService {
       return comment;
     }
 
-    const updatedComment = await this.commentsRepo.updateComment(
+    const updatedComment = await this.commentsRepository.updateComment(
       id,
       newContent,
     );
@@ -97,7 +102,7 @@ export class CommentsService implements ICommentsService {
   ): Promise<void> {
     await this.verifyPostAndGroup(postId, groupId);
     await this.verifyCommentOwnership(id, userId, postId);
-    await this.commentsRepo.deleteComment(id);
+    await this.commentsRepository.deleteComment(id);
   }
 
   // 검증용 메서드 ( 댓글, 게시물/그룹, 부모 댓글)
@@ -106,7 +111,7 @@ export class CommentsService implements ICommentsService {
     userId: number,
     postId: number,
   ): Promise<Comment> {
-    const comment = await this.commentsRepo.findCommentById(commentId);
+    const comment = await this.commentsRepository.findCommentById(commentId);
 
     if (!comment) {
       throw new NotFoundException('해당 댓글이 존재하지 않습니다.');
@@ -125,8 +130,8 @@ export class CommentsService implements ICommentsService {
   private async verifyPostAndGroup(
     postId: number,
     groupId: number,
-  ): Promise<Post> {
-    const post = await this.postsRepo.findPostById(postId);
+  ): Promise<PostGroupInfo> {
+    const post = await this.postsRepository.findGroupByPostId(postId);
 
     if (!post) {
       throw new NotFoundException('존재하지 않는 게시물입니다.');
@@ -141,7 +146,8 @@ export class CommentsService implements ICommentsService {
     parentId: number,
     postId: number,
   ): Promise<Comment> {
-    const parentComment = await this.commentsRepo.findCommentById(parentId);
+    const parentComment =
+      await this.commentsRepository.findCommentById(parentId);
 
     if (!parentComment) {
       throw new NotFoundException('존재하지 않는 부모 댓글입니다.');

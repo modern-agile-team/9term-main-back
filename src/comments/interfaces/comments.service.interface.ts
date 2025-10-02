@@ -1,6 +1,7 @@
 import { Comment } from '@prisma/client';
 import { CreateCommentDto } from '../dto/requests/create-comment.dto';
 import { UpdateCommentDto } from '../dto/requests/update-comment.dto';
+import { CommentWithAuthor } from './comment.interface';
 
 export interface ICommentsService {
   createComment(
@@ -14,7 +15,7 @@ export interface ICommentsService {
     postId: number,
     groupId: number,
     parentId?: number,
-  ): Promise<(Comment & { user: { id: number; name: string } })[]>;
+  ): Promise<CommentWithAuthor[]>;
 
   updateComment(
     id: number,

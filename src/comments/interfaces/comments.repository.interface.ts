@@ -1,19 +1,15 @@
 import { Comment } from '@prisma/client';
+import { CommentCreateData, CommentWithAuthor } from './comment.interface';
 
 export interface ICommentsRepository {
   findCommentById(id: number): Promise<Comment | null>;
 
-  createComment(data: {
-    content: string;
-    userId: number;
-    postId: number;
-    parentId: number | null;
-  }): Promise<Comment>;
+  createComment(data: CommentCreateData): Promise<Comment>;
 
   findComments(
     postId: number,
     parentId?: number | null,
-  ): Promise<(Comment & { user: { id: number; name: string } })[]>;
+  ): Promise<CommentWithAuthor[]>;
 
   updateComment(id: number, content: string): Promise<Comment>;
 
