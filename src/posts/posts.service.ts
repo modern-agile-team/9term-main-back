@@ -183,7 +183,14 @@ export class PostsService {
         `ID가 ${postId}인 게시물을 찾을 수 없습니다.`,
       );
     }
-    if (post.userId !== userId) {
+    const isAuthor = post.userId === userId;
+    const member = await this.memberRepository.findGroupMember(
+      post.groupId,
+      userId,
+    );
+    const isManager = member?.role === UserGroupRole.MANAGER;
+
+    if (!isAuthor && !isManager) {
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
