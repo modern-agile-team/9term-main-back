@@ -141,7 +141,15 @@ export class AuthController {
   async kakaoCallback(
     @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<
+    ApiResponseDto<
+      AuthTokenDataDto &
+        Partial<{
+          provider: string;
+          providerId: string;
+        }>
+    >
+  > {
     const result = await this.authService.oauthLogin({
       ...req.user,
       provider: OAuthProvider.KAKAO,

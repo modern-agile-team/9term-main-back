@@ -55,10 +55,21 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     const email = kakaoAccount?.email?.trim().toLowerCase();
     const emailVerified = kakaoAccount?.is_email_verified ?? false;
     const providerId = String(profile.id);
-    const displayName =
-      typeof profile.displayName === 'string'
-        ? profile.displayName.trim()
-        : undefined;
+    let displayName: string | undefined;
+
+    const nickname = kakaoAccount?.profile?.nickname;
+    if (typeof nickname === 'string') {
+      const trimmed = nickname.trim();
+      displayName = trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (!displayName) {
+      const fallback = (profile as { displayName?: unknown }).displayName;
+      if (typeof fallback === 'string') {
+        const trimmed = fallback.trim();
+        displayName = trimmed.length > 0 ? trimmed : undefined;
+      }
+    }
 
     return {
       provider: OAuthProvider.KAKAO,
