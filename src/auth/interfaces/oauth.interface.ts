@@ -7,3 +7,13 @@ export interface OAuthInput {
   emailVerified?: boolean;
   displayName?: string;
 }
+
+export interface KakaoProfileJson {
+  kakao_account?: {
+    email?: string;
+    is_email_verified?: boolean;
+    profile?: {
+      nickname?: string;
+    };
+  };
+}

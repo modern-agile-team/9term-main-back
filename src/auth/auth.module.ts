@@ -11,6 +11,7 @@ import { JwtRefreshStrategy } from './strategies/refresh.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { OAuthService } from './oauth.service';
+import { KakaoStrategy } from './strategies/kakao.strategy';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { OAuthService } from './oauth.service';
     PasswordEncoderService,
     JwtRefreshGuard,
     GoogleStrategy,
+    KakaoStrategy,
   ],
   controllers: [AuthController],
   exports: [AuthService, PassportModule],

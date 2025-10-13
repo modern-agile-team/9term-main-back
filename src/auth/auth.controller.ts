@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { OAuthProvider } from '@prisma/client';
+import { OAuthInput } from './interfaces/oauth.interface';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { AuthService } from './auth.service';
 import { ApiAuth, AuthSwagger } from './auth.swagger';
@@ -100,15 +101,7 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(
-    @Req()
-    req: Request & {
-      user: {
-        providerId: string;
-        email?: string;
-        emailVerified: boolean;
-        displayName?: string;
-      };
-    },
+    @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,
   ): Promise<
     ApiResponseDto<
@@ -120,11 +113,8 @@ export class AuthController {
     >
   > {
     const result = await this.authService.oauthLogin({
+      ...req.user,
       provider: OAuthProvider.GOOGLE,
-      providerId: req.user.providerId,
-      email: req.user.email,
-      emailVerified: req.user.emailVerified,
-      displayName: req.user.displayName,
     });
 
     res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
@@ -132,6 +122,44 @@ export class AuthController {
     return {
       status: 'success',
       message: '구글 로그인에 성공했습니다.',
+      data: {
+        accessToken: result.accessToken,
+        provider: result.provider,
+        providerId: result.providerId,
+      },
+    };
+  }
+
+  @Get('kakao')
+  @UseGuards(AuthGuard('kakao'))
+  kakaoLogin() {
+    return;
+  }
+
+  @Get('kakao/callback')
+  @UseGuards(AuthGuard('kakao'))
+  async kakaoCallback(
+    @Req() req: Request & { user: OAuthInput },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<
+    ApiResponseDto<
+      AuthTokenDataDto &
+        Partial<{
+          provider: string;
+          providerId: string;
+        }>
+    >
+  > {
+    const result = await this.authService.oauthLogin({
+      ...req.user,
+      provider: OAuthProvider.KAKAO,
+    });
+
+    res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
+
+    return {
+      status: 'success',
+      message: '카카오 로그인에 성공했습니다.',
       data: {
         accessToken: result.accessToken,
         provider: result.provider,
