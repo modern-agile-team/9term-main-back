@@ -191,6 +191,9 @@ export class PostsService {
     const isManager = member?.role === UserGroupRole.MANAGER;
 
     if (!isAuthor && !isManager) {
+      if (!member) {
+        throw new ForbiddenException('그룹 회원만 접근이 가능합니다');
+      }
       throw new ForbiddenException('이 게시물을 삭제할 권한이 없습니다.');
     }
 
