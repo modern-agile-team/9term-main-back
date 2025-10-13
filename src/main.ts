@@ -3,11 +3,26 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { RequestContextInterceptor } from './common/interceptors/request-context.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
   const configService = app.get(ConfigService);
+  const logger = app.get<Logger>(WINSTON_MODULE_NEST_PROVIDER);
+  app.useLogger(logger);
+  app.flushLogs();
+
+  app.useGlobalInterceptors(new RequestContextInterceptor());
+  const reflector = app.get<Reflector>(Reflector);
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
+  app.useGlobalFilters(new AllExceptionsFilter(logger)); // cloudwatch용 (raw winston logger))
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -17,9 +32,6 @@ async function bootstrap() {
       stopAtFirstError: true,
     }),
   );
-
-  const reflector = app.get<Reflector>(Reflector);
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
 
   app.use(cookieParser());
 
@@ -64,4 +76,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
+
 void bootstrap();
