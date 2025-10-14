@@ -100,6 +100,7 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
+  @ApiAuth.googleCallback()
   async googleCallback(
     @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,
@@ -138,6 +139,7 @@ export class AuthController {
 
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
+  @ApiAuth.kakaoCallback()
   async kakaoCallback(
     @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,

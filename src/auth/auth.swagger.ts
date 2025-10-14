@@ -1,17 +1,6 @@
-import { applyDecorators, Type } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiExtraModels,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-  getSchemaPath,
-} from '@nestjs/swagger';
-import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { applyDecorators } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
-import { SignupRequestDto } from './dto/requests/signup-request.dto';
-import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
-import { LoginResponseDto } from './dto/responses/login-response.dto';
 
 const unauthorizedExamples = {
   TokenExpired: {
@@ -26,32 +15,7 @@ const unauthorizedExamples = {
   },
 } as const;
 
-const conflictExamples = {
-  DuplicateUser: {
-    message: '이미 사용 중인 아이디입니다.',
-    error: 'Conflict',
-    statusCode: 409,
-  },
-} as const;
-
 const badRequestExamples = {
-  UsernamePattern: {
-    message: [
-      'username은 숫자만으로 구성될 수 없으며, 영문자와 숫자만 사용할 수 있습니다.',
-    ],
-    error: 'Bad Request',
-    statusCode: 400,
-  },
-  NamePattern: {
-    message: ['이름은 2자 이상 30자 이하로 입력해주세요.'],
-    error: 'Bad Request',
-    statusCode: 400,
-  },
-  PasswordPattern: {
-    message: ['비밀번호는 8자 이상이어야 합니다.'],
-    error: 'Bad Request',
-    statusCode: 400,
-  },
   FieldRequired: {
     message: ['필수 값이 누락되었거나 빈 문자열입니다.'],
     error: 'Bad Request',
@@ -93,19 +57,6 @@ const unauthorizedResponses = () =>
     },
   });
 
-const conflictResponses = () =>
-  ApiResponse({
-    status: 409,
-    description: '중복된 리소스',
-    content: {
-      'application/json': {
-        examples: {
-          '중복 사용자': { value: conflictExamples.DuplicateUser },
-        },
-      },
-    },
-  });
-
 const badRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
   ApiResponse({
     status: 400,
@@ -123,66 +74,43 @@ const badRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
     },
   });
 
-const ApiResponseWithData = <T extends Type<any>>(
-  model: T,
-  status = 200,
-  description = '요청이 성공적으로 처리되었습니다.',
-) => {
-  return applyDecorators(
-    ApiExtraModels(ApiResponseDto, model),
-    ApiResponse({
-      status,
-      description,
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            properties: {
-              status: { type: 'string', example: 'success' },
-              message: { type: 'string', example: description },
-              data: { $ref: getSchemaPath(model) },
-            },
-          },
-        },
-      },
-    }),
-  );
-};
-
 export function AuthSwagger() {
   return applyDecorators(ApiTags('Auth'));
 }
 
 export const ApiAuth = {
-  signup: () =>
-    applyDecorators(
-      ApiOperation({ summary: '회원가입' }),
-      ApiBody({ description: '회원가입 요청 DTO', type: SignupRequestDto }),
-      ApiResponse({
-        status: 201,
-        description: '회원가입 성공',
-        schema: {
-          properties: {
-            status: { type: 'string', example: 'success' },
-            message: { type: 'string', example: '회원가입에 성공했습니다.' },
-            data: { type: 'string', example: null, nullable: true },
-          },
-        },
-      }),
-      conflictResponses(),
-      badRequestResponses([
-        'UsernamePattern',
-        'NamePattern',
-        'PasswordPattern',
-        'FieldRequired',
-      ]),
-    ),
-
   login: () =>
     applyDecorators(
       ApiOperation({ summary: '로그인' }),
       ApiBody({ description: '로그인 요청 DTO', type: LoginRequestDto }),
-      ApiResponseWithData(LoginResponseDto, 201, '로그인에 성공했습니다.'),
+      ApiResponse({
+        status: 200,
+        description: '로그인 성공',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'success' },
+                message: {
+                  type: 'string',
+                  example: '로그인에 성공했습니다.',
+                },
+                data: {
+                  type: 'object',
+                  properties: {
+                    accessToken: {
+                      type: 'string',
+                      example:
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.loginAccessToken',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
       badRequestResponses(['LoginFail', 'FieldRequired', 'UserNotFound']),
       unauthorizedResponses(),
     ),
@@ -190,8 +118,121 @@ export const ApiAuth = {
   refresh: () =>
     applyDecorators(
       ApiOperation({ summary: '토큰 리프레시' }),
-      ApiResponseWithData(AuthTokenDataDto, 201, '토큰 재발급 성공'),
+      ApiResponse({
+        status: 200,
+        description: '토큰 재발급 성공',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'success' },
+                message: {
+                  type: 'string',
+                  example: 'Access Token 재발급에 성공했습니다.',
+                },
+                data: {
+                  type: 'object',
+                  properties: {
+                    accessToken: {
+                      type: 'string',
+                      example:
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshedAccessToken',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
       badRequestResponses(['RefreshToken', 'InvalidRefreshToken']),
       unauthorizedResponses(),
+    ),
+
+  googleCallback: () =>
+    applyDecorators(
+      ApiOperation({ summary: '구글 OAuth 콜백' }),
+      ApiResponse({
+        status: 200,
+        description: '구글 OAuth 로그인 성공',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'success' },
+                message: {
+                  type: 'string',
+                  example: '구글 로그인에 성공했습니다.',
+                },
+                data: {
+                  type: 'object',
+                  properties: {
+                    accessToken: {
+                      type: 'string',
+                      example:
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.googleAccessToken',
+                    },
+                    provider: {
+                      type: 'string',
+                      example: 'GOOGLE',
+                      nullable: true,
+                    },
+                    providerId: {
+                      type: 'string',
+                      example: '123456789012345678901',
+                      nullable: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ),
+
+  kakaoCallback: () =>
+    applyDecorators(
+      ApiOperation({ summary: '카카오 OAuth 콜백' }),
+      ApiResponse({
+        status: 200,
+        description: '카카오 OAuth 로그인 성공',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'success' },
+                message: {
+                  type: 'string',
+                  example: '카카오 로그인에 성공했습니다.',
+                },
+                data: {
+                  type: 'object',
+                  properties: {
+                    accessToken: {
+                      type: 'string',
+                      example:
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.kakaoAccessToken',
+                    },
+                    provider: {
+                      type: 'string',
+                      example: 'KAKAO',
+                      nullable: true,
+                    },
+                    providerId: {
+                      type: 'string',
+                      example: '987654321098765432101',
+                      nullable: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
     ),
 };
