@@ -1,5 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 
 const unauthorizedExamples = {
@@ -74,41 +74,36 @@ const badRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
     },
   });
 
-export function AuthSwagger() {
-  return applyDecorators(ApiTags('Auth'));
-}
-
 export const ApiAuth = {
+  okResponseWithData: (
+    description: string,
+    dataProperties: Record<string, any>,
+  ) =>
+    ApiResponse({
+      status: 200,
+      description,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', example: 'success' },
+              message: { type: 'string', example: description },
+              data: { type: 'object', properties: dataProperties },
+            },
+          },
+        },
+      },
+    }),
+
   login: () =>
     applyDecorators(
       ApiOperation({ summary: '로그인' }),
       ApiBody({ description: '로그인 요청 DTO', type: LoginRequestDto }),
-      ApiResponse({
-        status: 200,
-        description: '로그인 성공',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', example: 'success' },
-                message: {
-                  type: 'string',
-                  example: '로그인에 성공했습니다.',
-                },
-                data: {
-                  type: 'object',
-                  properties: {
-                    accessToken: {
-                      type: 'string',
-                      example:
-                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.loginAccessToken',
-                    },
-                  },
-                },
-              },
-            },
-          },
+      ApiAuth.okResponseWithData('로그인에 성공했습니다.', {
+        accessToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.loginAccessToken',
         },
       }),
       badRequestResponses(['LoginFail', 'FieldRequired', 'UserNotFound']),
@@ -118,32 +113,10 @@ export const ApiAuth = {
   refresh: () =>
     applyDecorators(
       ApiOperation({ summary: '토큰 리프레시' }),
-      ApiResponse({
-        status: 200,
-        description: '토큰 재발급 성공',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', example: 'success' },
-                message: {
-                  type: 'string',
-                  example: 'Access Token 재발급에 성공했습니다.',
-                },
-                data: {
-                  type: 'object',
-                  properties: {
-                    accessToken: {
-                      type: 'string',
-                      example:
-                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshedAccessToken',
-                    },
-                  },
-                },
-              },
-            },
-          },
+      ApiAuth.okResponseWithData('Access Token 재발급에 성공했습니다.', {
+        accessToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshedAccessToken',
         },
       }),
       badRequestResponses(['RefreshToken', 'InvalidRefreshToken']),
@@ -153,42 +126,16 @@ export const ApiAuth = {
   googleCallback: () =>
     applyDecorators(
       ApiOperation({ summary: '구글 OAuth 콜백' }),
-      ApiResponse({
-        status: 200,
-        description: '구글 OAuth 로그인 성공',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', example: 'success' },
-                message: {
-                  type: 'string',
-                  example: '구글 로그인에 성공했습니다.',
-                },
-                data: {
-                  type: 'object',
-                  properties: {
-                    accessToken: {
-                      type: 'string',
-                      example:
-                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.googleAccessToken',
-                    },
-                    provider: {
-                      type: 'string',
-                      example: 'GOOGLE',
-                      nullable: true,
-                    },
-                    providerId: {
-                      type: 'string',
-                      example: '123456789012345678901',
-                      nullable: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+      ApiAuth.okResponseWithData('구글 로그인에 성공했습니다.', {
+        accessToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.googleAccessToken',
+        },
+        provider: { type: 'string', example: 'GOOGLE', nullable: true },
+        providerId: {
+          type: 'string',
+          example: '123456789012345678901',
+          nullable: true,
         },
       }),
     ),
@@ -196,42 +143,16 @@ export const ApiAuth = {
   kakaoCallback: () =>
     applyDecorators(
       ApiOperation({ summary: '카카오 OAuth 콜백' }),
-      ApiResponse({
-        status: 200,
-        description: '카카오 OAuth 로그인 성공',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', example: 'success' },
-                message: {
-                  type: 'string',
-                  example: '카카오 로그인에 성공했습니다.',
-                },
-                data: {
-                  type: 'object',
-                  properties: {
-                    accessToken: {
-                      type: 'string',
-                      example:
-                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.kakaoAccessToken',
-                    },
-                    provider: {
-                      type: 'string',
-                      example: 'KAKAO',
-                      nullable: true,
-                    },
-                    providerId: {
-                      type: 'string',
-                      example: '987654321098765432101',
-                      nullable: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+      ApiAuth.okResponseWithData('카카오 로그인에 성공했습니다.', {
+        accessToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.kakaoAccessToken',
+        },
+        provider: { type: 'string', example: 'KAKAO', nullable: true },
+        providerId: {
+          type: 'string',
+          example: '987654321098765432101',
+          nullable: true,
         },
       }),
     ),

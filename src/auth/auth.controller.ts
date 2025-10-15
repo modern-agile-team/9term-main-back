@@ -8,19 +8,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { OAuthProvider } from '@prisma/client';
 import { OAuthInput } from './interfaces/oauth.interface';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { AuthService } from './auth.service';
-import { ApiAuth, AuthSwagger } from './auth.swagger';
+import { ApiAuth } from './auth.swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
 
 @Controller('auth')
-@AuthSwagger()
+@ApiTags('Auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
