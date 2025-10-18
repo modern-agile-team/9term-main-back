@@ -10,11 +10,11 @@ import { GroupsRepository } from './groups.repository';
 import { S3Service } from 'src/s3/s3.service';
 import { S3ObjectType } from 'src/s3/s3.types';
 
-import { CreateGroupDto } from './dto/create-group.dto';
-import { UpdateGroupDto } from './dto/update-group.dto';
-import { GroupResponseDto } from './dto/group-response.dto';
-import { GroupWithMemberCountDto } from './dto/group-with-member-count.dto';
-import { GroupJoinStatusDto } from './dto/group-join-status.dto';
+import { CreateGroupDto } from './dto/requests/create-group.dto';
+import { UpdateGroupDto } from './dto/requests/update-group.dto';
+import { GroupResponseDto } from './dto/responses/group-response.dto';
+import { GroupWithMemberCountDto } from './dto/responses/group-with-member-count.dto';
+import { GroupJoinStatusDto } from './dto/responses/group-join-status.dto';
 import { CreateGroupInput, UpdateGroupInput } from './types/group-inputs';
 
 @Injectable()
@@ -175,25 +175,20 @@ export class GroupsService {
     groupId: number,
     userId: number,
     fileToUpload?: Express.Multer.File,
-  ): Promise<GroupResponseDto> {
+  ): Promise<string> {
     await this.validateGroupExists(groupId);
 
     const group = await this.groupsRepository.findGroupById(groupId);
-    const previousImageKey = group!.groupImgPath;
+    const previousImageKey = group?.groupImgPath ?? null;
 
     if (!fileToUpload) {
-      const updatedGroup = await this.groupsRepository.updateGroupById(
-        groupId,
-        {
-          groupImgPath: null,
-        },
-      );
+      await this.groupsRepository.updateGroupById(groupId, {
+        groupImgPath: null,
+      });
 
       await this.safeDeleteS3File(previousImageKey);
 
-      return plainToInstance(GroupResponseDto, updatedGroup, {
-        excludeExtraneousValues: true,
-      });
+      return this.resolveGroupImageUrl(null);
     }
 
     const uploadedImageKey = await this.s3Service.uploadFile(fileToUpload, {
@@ -201,15 +196,13 @@ export class GroupsService {
       groupId,
     });
 
-    const updatedGroup = await this.groupsRepository.updateGroupById(groupId, {
+    await this.groupsRepository.updateGroupById(groupId, {
       groupImgPath: uploadedImageKey,
     });
 
     await this.safeDeleteS3File(previousImageKey);
 
-    return plainToInstance(GroupResponseDto, updatedGroup, {
-      excludeExtraneousValues: true,
-    });
+    return this.resolveGroupImageUrl(uploadedImageKey);
   }
 
   async removeGroup(groupId: number): Promise<void> {
@@ -247,12 +240,10 @@ export class GroupsService {
     groupId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<string | null> {
+    await this.validateGroupExists(groupId);
     const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
 
-    const previousBannerKey = group.groupBannerPath;
+    const previousBannerKey = group?.groupBannerPath ?? null;
 
     if (!fileToUpload) {
       await this.groupsRepository.updateGroupById(groupId, {
