@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { UserGroupRole } from '@prisma/client';
+import { GroupWithMemberCountDto } from './group-with-member-count.dto';
 
-export class GroupJoinStatusDto {
+export class GroupJoinStatusDto extends GroupWithMemberCountDto {
   @ApiProperty({
     description: '현재 로그인한 사용자가 해당 그룹에 가입했는지 여부',
     example: true,
@@ -17,10 +18,4 @@ export class GroupJoinStatusDto {
   })
   @Expose()
   role: UserGroupRole | null;
-
-  @Expose()
-  groupImageUrl: string;
-
-  @Expose()
-  groupBannerUrl: string | null;
 }

@@ -11,8 +11,19 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
   @Expose()
   memberCount: number;
 
+  @ApiProperty({
+    description: '그룹 이미지 사진',
+    example: 'https://amazonaws.com/group_banner/1/default.png',
+  })
   @Expose()
   groupImageUrl: string;
+
+  @ApiProperty({
+    description: '그룹 배너 이미지 사진',
+    example: 'https://amazonaws.com/group_banner/1/default.png',
+  })
+  @Expose()
+  groupBannerUrl: string | null;
 
   @ApiProperty({
     description: '모집 상태',

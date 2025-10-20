@@ -32,11 +32,12 @@ export class GroupsService {
     return this.s3Service.getFileUrl(effectiveKey);
   }
 
-  private async validateGroupExists(groupId: number): Promise<void> {
+  private async validateGroupExists(groupId: number) {
     const group = await this.groupsRepository.findGroupById(groupId);
     if (!group) {
       throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
     }
+    return group;
   }
 
   private async safeDeleteS3File(key: string | null): Promise<void> {
@@ -116,10 +117,7 @@ export class GroupsService {
     groupId: number,
     userId?: number,
   ): Promise<GroupJoinStatusDto> {
-    const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
+    const group = await this.validateGroupExists(groupId);
 
     const groupImageUrl = this.resolveGroupImageUrl(group.groupImgPath);
     const groupBannerUrl = this.resolveGroupImageUrl(group.groupBannerPath);
@@ -176,9 +174,8 @@ export class GroupsService {
     userId: number,
     fileToUpload?: Express.Multer.File,
   ): Promise<string> {
-    await this.validateGroupExists(groupId);
+    const group = await this.validateGroupExists(groupId);
 
-    const group = await this.groupsRepository.findGroupById(groupId);
     const previousImageKey = group?.groupImgPath ?? null;
 
     if (!fileToUpload) {
@@ -206,10 +203,7 @@ export class GroupsService {
   }
 
   async removeGroup(groupId: number): Promise<void> {
-    const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
+    await this.validateGroupExists(groupId);
 
     await this.groupsRepository.deleteGroupById(groupId);
 
@@ -226,10 +220,7 @@ export class GroupsService {
     groupId: number,
     recruitStatus: GroupRecruitStatus,
   ): Promise<void> {
-    const group = await this.groupsRepository.findGroupById(groupId);
-    if (!group) {
-      throw new NotFoundException(`그룹 ID ${groupId}를 찾을 수 없습니다.`);
-    }
+    await this.validateGroupExists(groupId);
 
     await this.groupsRepository.updateGroupById(groupId, {
       recruitStatus,
