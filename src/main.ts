@@ -1,10 +1,17 @@
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  LoggerService,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
+import {
+  WINSTON_MODULE_NEST_PROVIDER,
+  WINSTON_MODULE_PROVIDER,
+} from 'nest-winston';
+import { Logger as WinstonLogger } from 'winston';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RequestContextInterceptor } from './common/interceptors/request-context.interceptor';
@@ -15,14 +22,16 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const logger = app.get<Logger>(WINSTON_MODULE_NEST_PROVIDER);
-  app.useLogger(logger);
+  const nestLogger = app.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
+  app.useLogger(nestLogger);
   app.flushLogs();
+
+  const winstonLogger = app.get<WinstonLogger>(WINSTON_MODULE_PROVIDER);
 
   app.useGlobalInterceptors(new RequestContextInterceptor());
   const reflector = app.get<Reflector>(Reflector);
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
-  app.useGlobalFilters(new AllExceptionsFilter(logger)); // cloudwatch용 (raw winston logger))
+  app.useGlobalFilters(new AllExceptionsFilter(winstonLogger)); // cloudwatch용 (raw winston logger))
 
   app.useGlobalPipes(
     new ValidationPipe({

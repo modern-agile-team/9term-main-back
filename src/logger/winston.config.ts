@@ -18,7 +18,14 @@ const consoleFormat = nestWinstonModuleUtilities.format.nestLike('MyApp', {
   prettyPrint: true,
 });
 
-const removeStack = winston.format((info) => {
+// 콘솔 출력에서 HTTP 메타 숨김
+const stripHttpMeta = winston.format((info) => {
+  delete info.path;
+  delete info.method;
+  return info;
+});
+
+const removestack = winston.format((info) => {
   delete info.stack;
   return info;
 });
@@ -42,13 +49,15 @@ transports.push(
     format: isProd
       ? winston.format.combine(
           filterProdLogs(),
-          removeStack(),
+          removestack(),
           timestampKST,
+          stripHttpMeta(),
           winston.format.ms(),
           consoleFormat,
         )
       : winston.format.combine(
           timestampKST,
+          stripHttpMeta(),
           winston.format.ms(),
           consoleFormat,
         ),
@@ -72,11 +81,13 @@ if (isProd) {
           : info.stack;
 
         return JSON.stringify({
+          timestamp,
           level: info.level,
           message: info.message,
+          path: info.path,
+          method: info.method,
           context: info.context,
           stack,
-          timestamp,
         });
       },
     }),
