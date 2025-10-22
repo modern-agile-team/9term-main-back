@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -182,6 +183,11 @@ export class UsersService {
     return `${prefix}_user${suffix}`;
   }
 
+  private generateDeletedUsername(userId: number): string {
+    const suffix = Date.now().toString(36).slice(-4);
+    return `del${userId}${suffix}`.slice(0, 20);
+  }
+
   private getRandomDefaultImageKey(): string {
     const randomIndex = Math.floor(
       Math.random() * this.defaultImageKeys.length,
@@ -333,6 +339,45 @@ export class UsersService {
       throw new InternalServerErrorException(
         '내 그룹 목록 조회 중 오류가 발생했습니다.',
       );
+    }
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    const user = await this.getUserOrThrow(userId);
+    const hasCustomImage = Boolean(user.profileImgPath);
+    const isDefaultImage = user.profileImgPath
+      ? this.defaultImageKeys.includes(user.profileImgPath)
+      : false;
+
+    const managedGroups = await this.usersRepository.findManagedGroups(userId);
+    if (managedGroups.length > 0) {
+      throw new ConflictException(
+        '그룹 매니저 권한을 가진 상태에서는 탈퇴할 수 없습니다. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.',
+      );
+    }
+
+    const anonymizedUsername = this.generateDeletedUsername(userId);
+    const replacementImageKey = this.getRandomDefaultImageKey();
+
+    await this.usersRepository.purgeUserDataExceptContent(userId, {
+      username: anonymizedUsername,
+      name: '탈퇴한 사용자',
+      email: null,
+      emailVerified: false,
+      password: null,
+      profileImgPath: replacementImageKey,
+      nameChangedAt: null,
+    });
+
+    if (hasCustomImage && !isDefaultImage && user.profileImgPath) {
+      await this.s3Service
+        .deleteFile(user.profileImgPath)
+        .catch((err) =>
+          console.error(
+            `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패: ${user.profileImgPath}`,
+            err,
+          ),
+        );
     }
   }
 }

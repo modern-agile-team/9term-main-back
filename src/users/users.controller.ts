@@ -106,6 +106,20 @@ export class UsersController {
     };
   }
 
+  @Delete('me')
+  @ApiUsers.deleteAccount()
+  async deleteAccount(
+    @User() user: AuthenticatedUserResponse,
+  ): Promise<ApiResponseDto<null>> {
+    await this.usersService.deleteUser(user.userId);
+
+    return {
+      status: 'success',
+      message: '회원 탈퇴가 완료되었습니다.',
+      data: null,
+    };
+  }
+
   @Get('me/groups')
   @ApiUsers.getMyGroups()
   async getMyGroups(

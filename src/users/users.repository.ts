@@ -5,6 +5,7 @@ import {
   MembershipStatus,
   OAuthAccount,
   OAuthProvider,
+  UserGroupRole,
 } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -36,6 +37,24 @@ export class UsersRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
+  async deleteUserById(userId: number): Promise<void> {
+    await this.prisma.user.delete({ where: { id: userId } });
+  }
+
+  async purgeUserDataExceptContent(
+    userId: number,
+    anonymizedData: Prisma.UserUpdateInput,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.postLike.deleteMany({ where: { userId } });
+      await tx.userGroup.deleteMany({ where: { userId } });
+      await tx.userNotification.deleteMany({ where: { userId } });
+      await tx.oAuthAccount.deleteMany({ where: { userId } });
+
+      await tx.user.update({ where: { id: userId }, data: anonymizedData });
+    });
+  }
+
   async findOAuthAccount(
     provider: OAuthProvider,
     providerId: string,
@@ -43,6 +62,31 @@ export class UsersRepository {
     return this.prisma.oAuthAccount.findUnique({
       where: { provider_providerId: { provider, providerId } },
     });
+  }
+
+  async findManagedGroups(
+    userId: number,
+  ): Promise<{ groupId: number; groupName: string }[]> {
+    const managedGroups = await this.prisma.userGroup.findMany({
+      where: {
+        userId,
+        role: UserGroupRole.MANAGER,
+        status: MembershipStatus.APPROVED,
+      },
+      select: {
+        groupId: true,
+        group: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return managedGroups.map((membership) => ({
+      groupId: membership.groupId,
+      groupName: membership.group.name,
+    }));
   }
 
   async linkOAuthAccount(

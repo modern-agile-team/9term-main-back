@@ -84,6 +84,10 @@ export class AuthService {
     };
   }
 
+  async deleteAccount(userId: number): Promise<void> {
+    await this.usersService.deleteUser(userId);
+  }
+
   private issueTokens(user: User): {
     accessToken: string;
     refreshToken: string;
