@@ -14,6 +14,7 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
   @ApiProperty({
     description: '그룹 이미지 사진',
     example: 'https://amazonaws.com/group_banner/1/default.png',
+    nullable: true,
   })
   @Expose()
   groupImageUrl: string;
@@ -21,6 +22,7 @@ export class GroupWithMemberCountDto extends GroupResponseDto {
   @ApiProperty({
     description: '그룹 배너 이미지 사진',
     example: 'https://amazonaws.com/group_banner/1/default.png',
+    nullable: true,
   })
   @Expose()
   groupBannerUrl: string | null;

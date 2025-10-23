@@ -127,7 +127,7 @@ export class GroupsController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile: Express.Multer.File,
     @User() user: AuthenticatedUser,
-  ): Promise<ApiResponseDto<{ GroupImageUrl: string | null }>> {
+  ): Promise<ApiResponseDto<{ groupImageUrl: string | null }>> {
     const updatedGroup = await this.groupsService.upsertGroupImage(
       groupId,
       user.userId,
@@ -137,7 +137,7 @@ export class GroupsController {
     return {
       status: 'success',
       message: '그룹 이미지가 성공적으로 변경되었습니다.',
-      data: { GroupImageUrl: updatedGroup },
+      data: { groupImageUrl: updatedGroup },
     };
   }
 
@@ -180,7 +180,7 @@ export class GroupsController {
   async upsertGroupBanner(
     @Param('groupId', ParseIntPipe) groupId: number,
     @UploadedFile() uploadFile?: Express.Multer.File,
-  ): Promise<ApiResponseDto<{ GroupBannerImageUrl: string | null }>> {
+  ): Promise<ApiResponseDto<{ groupBannerImageUrl: string | null }>> {
     const bannerImageUrl = await this.groupsService.upsertGroupBanner(
       groupId,
       uploadFile,
@@ -191,7 +191,7 @@ export class GroupsController {
       message: uploadFile
         ? '그룹 배너 이미지가 성공적으로 변경되었습니다.'
         : '그룹 배너 이미지가 성공적으로 제거되었습니다.',
-      data: { GroupBannerImageUrl: bannerImageUrl },
+      data: { groupBannerImageUrl: bannerImageUrl },
     };
   }
 }
