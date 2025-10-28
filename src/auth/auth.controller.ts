@@ -8,17 +8,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import { OAuthProvider } from '@prisma/client';
-import { OAuthInput } from './interfaces/oauth.interface';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { AuthService } from './auth.service';
 import { ApiAuth } from './auth.swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
 import { JwtRefreshGuard } from './guards/refresh.guard';
+import { OAuthInput } from './interfaces/oauth.interface';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -105,31 +104,14 @@ export class AuthController {
   async googleCallback(
     @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<
-    ApiResponseDto<
-      AuthTokenDataDto &
-        Partial<{
-          provider: string;
-          providerId: string;
-        }>
-    >
-  > {
-    const result = await this.authService.oauthLogin({
-      ...req.user,
-      provider: OAuthProvider.GOOGLE,
-    });
+  ): Promise<void> {
+    const result = await this.authService.oauthLogin(req.user);
 
     res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
-
-    return {
-      status: 'success',
-      message: '구글 로그인에 성공했습니다.',
-      data: {
-        accessToken: result.accessToken,
-        provider: result.provider,
-        providerId: result.providerId,
-      },
-    };
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    res.redirect(
+      `${frontendUrl}/login/success?accessToken=${result.accessToken}`,
+    );
   }
 
   @Get('kakao')
@@ -144,30 +126,14 @@ export class AuthController {
   async kakaoCallback(
     @Req() req: Request & { user: OAuthInput },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<
-    ApiResponseDto<
-      AuthTokenDataDto &
-        Partial<{
-          provider: string;
-          providerId: string;
-        }>
-    >
-  > {
-    const result = await this.authService.oauthLogin({
-      ...req.user,
-      provider: OAuthProvider.KAKAO,
-    });
+  ): Promise<void> {
+    const result = await this.authService.oauthLogin(req.user);
 
     res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
 
-    return {
-      status: 'success',
-      message: '카카오 로그인에 성공했습니다.',
-      data: {
-        accessToken: result.accessToken,
-        provider: result.provider,
-        providerId: result.providerId,
-      },
-    };
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    res.redirect(
+      `${frontendUrl}/login/success?accessToken=${result.accessToken}`,
+    );
   }
 }

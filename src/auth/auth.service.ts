@@ -3,11 +3,11 @@ import { InternalServerErrorException } from '@nestjs/common/exceptions/internal
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
-import { OAuthInput } from './interfaces/oauth.interface';
 import { UsersService } from 'src/users/users.service';
-import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { OAuthInput } from './interfaces/oauth.interface';
+import { OAuthService } from './oauth.service';
 import { PasswordEncoderService } from './password-encoder.service';
 
 @Injectable()
@@ -72,9 +72,6 @@ export class AuthService {
     providerId?: string;
   }> {
     const user = await this.oauthService.resolveUser(params);
-    if (!user) {
-      throw new InternalServerErrorException('OAuth 처리 실패');
-    }
     const tokens = this.issueTokens(user);
     const canSet = !user.password;
     return {

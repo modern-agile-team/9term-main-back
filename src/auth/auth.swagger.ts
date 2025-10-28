@@ -74,6 +74,22 @@ const badRequestResponses = (keys: (keyof typeof badRequestExamples)[]) =>
     },
   });
 
+const redirectResponse = () =>
+  ApiResponse({
+    status: 302,
+    description: 'OAuth 인증 후 프론트엔드로 리다이렉트',
+    headers: {
+      Location: {
+        description: '리다이렉트 대상 URL',
+        schema: {
+          type: 'string',
+          example:
+            'https://<FRONTEND_URL>/login/success?accessToken=<JWT_ACCESS_TOKEN>',
+        },
+      },
+    },
+  });
+
 export const ApiAuth = {
   okResponseWithData: (
     description: string,
@@ -126,34 +142,12 @@ export const ApiAuth = {
   googleCallback: () =>
     applyDecorators(
       ApiOperation({ summary: '구글 OAuth 콜백' }),
-      ApiAuth.okResponseWithData('구글 로그인에 성공했습니다.', {
-        accessToken: {
-          type: 'string',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.googleAccessToken',
-        },
-        provider: { type: 'string', example: 'GOOGLE', nullable: true },
-        providerId: {
-          type: 'string',
-          example: '123456789012345678901',
-          nullable: true,
-        },
-      }),
+      redirectResponse(),
     ),
 
   kakaoCallback: () =>
     applyDecorators(
       ApiOperation({ summary: '카카오 OAuth 콜백' }),
-      ApiAuth.okResponseWithData('카카오 로그인에 성공했습니다.', {
-        accessToken: {
-          type: 'string',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.kakaoAccessToken',
-        },
-        provider: { type: 'string', example: 'KAKAO', nullable: true },
-        providerId: {
-          type: 'string',
-          example: '987654321098765432101',
-          nullable: true,
-        },
-      }),
+      redirectResponse(),
     ),
 };
