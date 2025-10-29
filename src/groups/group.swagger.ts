@@ -325,7 +325,8 @@ export const ApiGroups = {
             groupImage: {
               type: 'string',
               format: 'binary',
-              description: '업로드할 이미지 파일',
+              description:
+                '업로드할 이미지 파일(선택). 파일이 없으면 배너가 삭제됩니다.',
             },
           },
           required: ['groupImage'],
@@ -353,6 +354,48 @@ export const ApiGroups = {
       }),
       notFoundExamples(['Group']),
       unauthorizedExamples(),
+    ),
+
+  updateBanner: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '그룹 배너 이미지 변경',
+        description:
+          '그룹 배너 이미지를 변경/삭제합니다. 파일이 없으면 삭제로 간주됩니다.',
+      }),
+      ApiConsumes('multipart/form-data'),
+      ApiBody({
+        schema: {
+          type: 'object',
+          properties: {
+            groupBannerImage: {
+              type: 'string',
+              format: 'binary',
+              description:
+                '업로드할 배너 이미지 파일(선택). 파일이 없으면 배너가 삭제됩니다.',
+            },
+          },
+        },
+      }),
+      ApiResponse({
+        status: 200,
+        description: '그룹 배너 이미지 변경 성공',
+        content: {
+          'application/json': {
+            example: {
+              status: `success`,
+              message: '그룹 배너 이미지가 성공적으로 변경/삭제되었습니다.',
+              data: {
+                bannerImageUrl:
+                  'https://example-s3.amazonaws.com/group/banner/xxxx.png',
+              },
+            },
+          },
+        },
+      }),
+      notFoundExamples(['Group']),
+      unauthorizedExamples(),
+      forbiddenExamples(),
     ),
 
   remove: () =>
