@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { UsersService } from 'src/users/users.service';
 import { OAuthInput } from './interfaces/oauth.interface';
@@ -18,7 +18,9 @@ export class OAuthService {
     if (account) {
       const user = await this.usersService.findUserById(account.userId);
       if (!user) {
-        throw new NotFoundException('연결된 사용자 정보를 찾을 수 없습니다.');
+        throw new InternalServerErrorException(
+          '연결된 사용자 정보를 찾을 수 없습니다.',
+        );
       }
       return user;
     }

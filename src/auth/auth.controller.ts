@@ -110,7 +110,7 @@ export class AuthController {
     res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     res.redirect(
-      `${frontendUrl}/login/success?accessToken=${result.accessToken}`,
+      `${frontendUrl}/login/success#accessToken=${result.accessToken}`,
     );
   }
 
@@ -130,10 +130,9 @@ export class AuthController {
     const result = await this.authService.oauthLogin(req.user);
 
     res.cookie('refresh_token', result.refreshToken, this.getCookieOptions());
-
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     res.redirect(
-      `${frontendUrl}/login/success?accessToken=${result.accessToken}`,
+      `${frontendUrl}/login/success#accessToken=${result.accessToken}`,
     );
   }
 }

@@ -68,17 +68,9 @@ export class AuthService {
   async oauthLogin(params: OAuthInput): Promise<{
     accessToken: string;
     refreshToken: string;
-    provider?: string;
-    providerId?: string;
   }> {
     const user = await this.oauthService.resolveUser(params);
-    const tokens = this.issueTokens(user);
-    const canSet = !user.password;
-    return {
-      ...tokens,
-      provider: canSet ? params.provider : undefined,
-      providerId: canSet ? params.providerId : undefined,
-    };
+    return this.issueTokens(user);
   }
 
   private issueTokens(user: User): {
@@ -91,7 +83,7 @@ export class AuthService {
       name: user.name,
     };
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
+      secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     });
     const refreshPayload = { sub: user.id };
