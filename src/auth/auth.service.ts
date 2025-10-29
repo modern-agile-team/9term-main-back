@@ -3,11 +3,11 @@ import { InternalServerErrorException } from '@nestjs/common/exceptions/internal
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
-import { OAuthInput } from './interfaces/oauth.interface';
 import { UsersService } from 'src/users/users.service';
-import { OAuthService } from './oauth.service';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { OAuthInput } from './interfaces/oauth.interface';
+import { OAuthService } from './oauth.service';
 import { PasswordEncoderService } from './password-encoder.service';
 
 @Injectable()
@@ -68,20 +68,9 @@ export class AuthService {
   async oauthLogin(params: OAuthInput): Promise<{
     accessToken: string;
     refreshToken: string;
-    provider?: string;
-    providerId?: string;
   }> {
     const user = await this.oauthService.resolveUser(params);
-    if (!user) {
-      throw new InternalServerErrorException('OAuth 처리 실패');
-    }
-    const tokens = this.issueTokens(user);
-    const canSet = !user.password;
-    return {
-      ...tokens,
-      provider: canSet ? params.provider : undefined,
-      providerId: canSet ? params.providerId : undefined,
-    };
+    return this.issueTokens(user);
   }
 
   private issueTokens(user: User): {
@@ -94,7 +83,7 @@ export class AuthService {
       name: user.name,
     };
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_SECRET_KEY'),
+      secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     });
     const refreshPayload = { sub: user.id };
