@@ -55,6 +55,7 @@ model User {
   profileImgPath String?     @map("profile_img_path") @db.VarChar(255)
   nameChangedAt         DateTime?          @map("name_changed_at")
   createdAt      DateTime    @default(now()) @map("created_at")
+  deletedAt      DateTime?   @map("deleted_at")
   comments       Comment[]
   postLikes      PostLike[]
   posts          Post[]

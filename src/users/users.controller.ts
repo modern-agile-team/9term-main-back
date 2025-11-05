@@ -107,8 +107,8 @@ export class UsersController {
   }
 
   @Delete('me')
-  @ApiUsers.deleteAccount()
-  async deleteAccount(
+  @ApiUsers.deleteUser()
+  async deleteUser(
     @User() user: AuthenticatedUserResponse,
   ): Promise<ApiResponseDto<null>> {
     await this.usersService.deleteUser(user.userId);

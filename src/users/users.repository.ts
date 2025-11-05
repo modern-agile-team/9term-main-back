@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   Prisma,
   User,
+  UserGroup,
   MembershipStatus,
   OAuthAccount,
   OAuthProvider,
@@ -17,16 +18,40 @@ export class UsersRepository {
     return this.prisma.oAuthAccount.findMany({ where: { userId } });
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { username } });
+  async findByUsername(
+    username: string,
+    options?: { includeDeleted?: boolean },
+  ): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        username,
+        ...(options?.includeDeleted ? {} : { deletedAt: null }),
+      },
+    });
   }
 
-  async findUserById(id: number): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id } });
+  async findUserById(
+    id: number,
+    options?: { includeDeleted?: boolean },
+  ): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        id,
+        ...(options?.includeDeleted ? {} : { deletedAt: null }),
+      },
+    });
   }
 
-  async findUserByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
+  async findUserByEmail(
+    email: string,
+    options?: { includeDeleted?: boolean },
+  ): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        email,
+        ...(options?.includeDeleted ? {} : { deletedAt: null }),
+      },
+    });
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
@@ -35,10 +60,6 @@ export class UsersRepository {
 
   async updateUser(id: number, data: Prisma.UserUpdateInput): Promise<User> {
     return this.prisma.user.update({ where: { id }, data });
-  }
-
-  async deleteUserById(userId: number): Promise<void> {
-    await this.prisma.user.delete({ where: { id: userId } });
   }
 
   async purgeUserDataExceptContent(
@@ -51,7 +72,12 @@ export class UsersRepository {
       await tx.userNotification.deleteMany({ where: { userId } });
       await tx.oAuthAccount.deleteMany({ where: { userId } });
 
-      await tx.user.update({ where: { id: userId }, data: anonymizedData });
+      const updateData = {
+        ...anonymizedData,
+        deletedAt: new Date(),
+      } as Prisma.UserUncheckedUpdateInput;
+
+      await tx.user.update({ where: { id: userId }, data: updateData });
     });
   }
 
@@ -64,29 +90,18 @@ export class UsersRepository {
     });
   }
 
-  async findManagedGroups(
+  async findUserGroups(
     userId: number,
-  ): Promise<{ groupId: number; groupName: string }[]> {
-    const managedGroups = await this.prisma.userGroup.findMany({
+    role?: UserGroupRole,
+    status?: MembershipStatus,
+  ): Promise<UserGroup[]> {
+    return this.prisma.userGroup.findMany({
       where: {
         userId,
-        role: UserGroupRole.MANAGER,
-        status: MembershipStatus.APPROVED,
-      },
-      select: {
-        groupId: true,
-        group: {
-          select: {
-            name: true,
-          },
-        },
+        ...(role ? { role } : {}),
+        ...(status ? { status } : {}),
       },
     });
-
-    return managedGroups.map((membership) => ({
-      groupId: membership.groupId,
-      groupName: membership.group.name,
-    }));
   }
 
   async linkOAuthAccount(

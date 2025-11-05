@@ -317,7 +317,7 @@ export const ApiUsers = {
       notFoundResponses(notFoundExamples),
     ),
 
-  deleteAccount: () =>
+  deleteUser: () =>
     applyDecorators(
       ApiOperation({
         summary: '회원 탈퇴',

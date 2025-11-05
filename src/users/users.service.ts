@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +13,7 @@ import {
   OAuthProvider,
   Prisma,
   User,
+  UserGroupRole,
 } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { OAuthInput } from 'src/auth/interfaces/oauth.interface';
@@ -26,6 +28,7 @@ import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   private readonly defaultImageKeys: string[];
   private readonly NAME_CHANGE_INTERVAL_DAYS = 30;
 
@@ -344,12 +347,17 @@ export class UsersService {
 
   async deleteUser(userId: number): Promise<void> {
     const user = await this.getUserOrThrow(userId);
-    const hasCustomImage = Boolean(user.profileImgPath);
-    const isDefaultImage = user.profileImgPath
-      ? this.defaultImageKeys.includes(user.profileImgPath)
+    const previousProfileImgKey = user.profileImgPath ?? null;
+    const hasCustomImage = Boolean(previousProfileImgKey);
+    const isDefaultImage = previousProfileImgKey
+      ? this.defaultImageKeys.includes(previousProfileImgKey)
       : false;
 
-    const managedGroups = await this.usersRepository.findManagedGroups(userId);
+    const managedGroups = await this.usersRepository.findUserGroups(
+      userId,
+      UserGroupRole.MANAGER,
+      MembershipStatus.APPROVED,
+    );
     if (managedGroups.length > 0) {
       throw new ConflictException(
         '그룹 매니저 권한을 가진 상태에서는 탈퇴할 수 없습니다. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.',
@@ -369,13 +377,14 @@ export class UsersService {
       nameChangedAt: null,
     });
 
-    if (hasCustomImage && !isDefaultImage && user.profileImgPath) {
+    if (hasCustomImage && !isDefaultImage) {
       await this.s3Service
-        .deleteFile(user.profileImgPath)
+        .deleteFile(previousProfileImgKey as string)
         .catch((err) =>
-          console.error(
-            `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패: ${user.profileImgPath}`,
-            err,
+          this.logger.error(
+            `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패`,
+            err.stack,
+            `${UsersService.name}#deleteUser`,
           ),
         );
     }
