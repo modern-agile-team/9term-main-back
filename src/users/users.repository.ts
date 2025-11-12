@@ -104,6 +104,43 @@ export class UsersRepository {
     });
   }
 
+  async findGroupsWhereUserIsOnlyManager(
+    userId: number,
+  ): Promise<Array<{ groupId: number; groupName: string }>> {
+    const managerMemberships = await this.prisma.userGroup.findMany({
+      where: {
+        userId,
+        role: UserGroupRole.MANAGER,
+        status: MembershipStatus.APPROVED,
+      },
+      select: {
+        groupId: true,
+        group: {
+          select: {
+            name: true,
+            _count: {
+              select: {
+                userGroups: {
+                  where: {
+                    role: UserGroupRole.MANAGER,
+                    status: MembershipStatus.APPROVED,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return managerMemberships
+      .filter((m) => (m.group._count?.userGroups ?? 0) === 1)
+      .map((m) => ({
+        groupId: m.groupId,
+        groupName: m.group.name,
+      }));
+  }
+
   async linkOAuthAccount(
     userId: number,
     provider: OAuthProvider,

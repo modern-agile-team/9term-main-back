@@ -13,7 +13,6 @@ import {
   OAuthProvider,
   Prisma,
   User,
-  UserGroupRole,
 } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { OAuthInput } from 'src/auth/interfaces/oauth.interface';
@@ -353,14 +352,13 @@ export class UsersService {
       ? this.defaultImageKeys.includes(previousProfileImgKey)
       : false;
 
-    const managedGroups = await this.usersRepository.findUserGroups(
-      userId,
-      UserGroupRole.MANAGER,
-      MembershipStatus.APPROVED,
-    );
-    if (managedGroups.length > 0) {
+    const soleManagedGroups =
+      await this.usersRepository.findGroupsWhereUserIsOnlyManager(userId);
+
+    if (soleManagedGroups.length > 0) {
+      const groupNames = soleManagedGroups.map((g) => g.groupName).join(', ');
       throw new ConflictException(
-        '그룹 매니저 권한을 가진 상태에서는 탈퇴할 수 없습니다. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.',
+        `아직 다른 매니저가 없는 그룹이 있습니다: ${groupNames}. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.`,
       );
     }
 
