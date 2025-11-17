@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -23,6 +22,7 @@ import {
   UserProfileDto,
   UserProfileNextDateDto,
 } from 'src/users/dto/responses/user-profile.dto';
+import { UserDeletionService } from './user-deletion.service';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
@@ -35,6 +35,7 @@ export class UsersService {
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly usersRepository: UsersRepository,
+    private readonly userDeletionService: UserDeletionService,
   ) {
     const defaultImagesString = this.configService.get<string>(
       'DEFAULT_PROFILE_IMAGE_URL',
@@ -345,46 +346,6 @@ export class UsersService {
   }
 
   async deleteUser(userId: number): Promise<void> {
-    const user = await this.getUserOrThrow(userId);
-    const previousProfileImgKey = user.profileImgPath ?? null;
-    const hasCustomImage = Boolean(previousProfileImgKey);
-    const isDefaultImage = previousProfileImgKey
-      ? this.defaultImageKeys.includes(previousProfileImgKey)
-      : false;
-
-    const soleManagedGroups =
-      await this.usersRepository.findGroupsWhereUserIsOnlyManager(userId);
-
-    if (soleManagedGroups.length > 0) {
-      const groupNames = soleManagedGroups.map((g) => g.groupName).join(', ');
-      throw new ConflictException(
-        `아직 다른 매니저가 없는 그룹이 있습니다: ${groupNames}. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.`,
-      );
-    }
-
-    const anonymizedUsername = this.generateDeletedUsername(userId);
-    const replacementImageKey = this.getRandomDefaultImageKey();
-
-    await this.usersRepository.purgeUserDataExceptContent(userId, {
-      username: anonymizedUsername,
-      name: '탈퇴한 사용자',
-      email: null,
-      emailVerified: false,
-      password: null,
-      profileImgPath: replacementImageKey,
-      nameChangedAt: null,
-    });
-
-    if (hasCustomImage && !isDefaultImage) {
-      await this.s3Service
-        .deleteFile(previousProfileImgKey as string)
-        .catch((err) =>
-          this.logger.error(
-            `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패`,
-            err.stack,
-            `${UsersService.name}#deleteUser`,
-          ),
-        );
-    }
+    return this.userDeletionService.deleteUser(userId);
   }
 }

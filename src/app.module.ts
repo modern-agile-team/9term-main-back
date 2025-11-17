@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import { AppController } from './app.controller';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
     }),
     WinstonModule.forRoot(winstonConfig),
+    EventEmitterModule.forRoot(),
 
     PrismaModule,
     S3Module,
