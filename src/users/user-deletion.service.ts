@@ -1,20 +1,8 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { S3Service } from 'src/s3/s3.service';
 import { UsersRepository } from './users.repository';
-
-export class UserDeletedEvent {
-  constructor(
-    public readonly userId: number,
-    public readonly previousProfileImgKey?: string,
-  ) {}
-}
+import { MembersService } from '../member/member.service';
 
 @Injectable()
 export class UserDeletionService {
@@ -23,9 +11,9 @@ export class UserDeletionService {
 
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly membersService: MembersService,
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
-    private readonly eventEmitter: EventEmitter2,
   ) {
     const defaultImagesString = this.configService.get<string>(
       'DEFAULT_PROFILE_IMAGE_URL',
@@ -48,45 +36,39 @@ export class UserDeletionService {
     return this.defaultImageKeys[randomIndex];
   }
 
-  async validateDeletionAllowed(userId: number): Promise<void> {
-    const soleManagedGroups =
-      await this.usersRepository.findGroupsWhereUserIsOnlyManager(userId);
-
-    if (soleManagedGroups.length > 0) {
-      const groupNames = soleManagedGroups.map((g) => g.groupName).join(', ');
-      throw new ConflictException(
-        `아직 다른 매니저가 없는 그룹이 있습니다: ${groupNames}. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.`,
-      );
-    }
-  }
-
   async deleteUser(userId: number): Promise<void> {
     const user = await this.usersRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    await this.validateDeletionAllowed(userId);
+    await this.membersService.ensureUserHasNoSoleManagedGroups(userId);
 
     const previousProfileImgKey = user.profileImgPath;
 
-    const anonymizedUsername = this.generateDeletedUsername(userId);
-    const replacementImageKey = this.getRandomDefaultImageKey();
+    const CustomProfileImage =
+      previousProfileImgKey &&
+      !this.defaultImageKeys.includes(previousProfileImgKey);
 
     await this.usersRepository.purgeUserDataExceptContent(userId, {
-      username: anonymizedUsername,
+      username: this.generateDeletedUsername(userId),
       name: '탈퇴한 사용자',
       email: null,
       emailVerified: false,
       password: null,
-      profileImgPath: replacementImageKey,
+      profileImgPath: this.getRandomDefaultImageKey(),
       nameChangedAt: null,
     });
 
-    this.eventEmitter.emit(
-      'user.deleted',
-      new UserDeletedEvent(userId, previousProfileImgKey || undefined),
-    );
+    if (CustomProfileImage) {
+      await this.s3Service.deleteFile(previousProfileImgKey).catch((err) => {
+        this.logger.error(
+          `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패: ${previousProfileImgKey}`,
+          err.stack,
+          `${UserDeletionService.name}#deleteUser`,
+        );
+      });
+    }
 
     this.logger.log(`사용자 ${userId} 탈퇴 처리 완료`);
   }

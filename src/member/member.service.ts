@@ -248,4 +248,27 @@ export class MembersService {
     );
     return toMemberResponseDto(updated);
   }
+
+  async findGroupsWhereUserIsOnlyManager(
+    userId: number,
+  ): Promise<Array<{ groupId: number; groupName: string }>> {
+    const managedGroups =
+      await this.memberRepository.findManagedGroupsWithManagerCount(userId);
+
+    return managedGroups
+      .filter((membership) => (membership.group._count?.userGroups ?? 0) === 1)
+      .map(({ groupId, group }) => ({ groupId, groupName: group.name }));
+  }
+
+  async ensureUserHasNoSoleManagedGroups(userId: number): Promise<void> {
+    const soleManagedGroups =
+      await this.findGroupsWhereUserIsOnlyManager(userId);
+
+    if (soleManagedGroups.length > 0) {
+      const groupNames = soleManagedGroups.map((g) => g.groupName).join(', ');
+      throw new ConflictException(
+        `아직 다른 매니저가 없는 그룹이 있습니다: ${groupNames}. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.`,
+      );
+    }
+  }
 }

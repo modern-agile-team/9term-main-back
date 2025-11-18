@@ -186,11 +186,6 @@ export class UsersService {
     return `${prefix}_user${suffix}`;
   }
 
-  private generateDeletedUsername(userId: number): string {
-    const suffix = Date.now().toString(36).slice(-4);
-    return `del${userId}${suffix}`.slice(0, 20);
-  }
-
   private getRandomDefaultImageKey(): string {
     const randomIndex = Math.floor(
       Math.random() * this.defaultImageKeys.length,
