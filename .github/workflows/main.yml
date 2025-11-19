@@ -9,9 +9,8 @@ on:
     branches:
       - main
       - develop
-
 jobs:
-  build-and-push-docker:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +29,14 @@ jobs:
       - name: Lint & Build
         run: npm run lint && npm run build
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  build-and-push-docker:
+    if: github.event_name == 'push'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -45,34 +50,35 @@ jobs:
           context: .
           push: ${{ github.event_name == 'push' }}
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/modgu:latest
+            ${{ secrets.DOCKER_USERNAME }}/modgu:${{ github.ref_name }}
             ${{ secrets.DOCKER_USERNAME }}/modgu:${{ github.sha }}
 
-  ## deploy
-  deploy-to-ec2-self-hosted:
-    needs: build-and-push-docker # build-and-push-docker 작업이 완료된 후 실행
-    runs-on: [self-hosted, modgu-back-runner, linux, x64]
+  ## prod deploy
+  deploy-to-ec2-prod:
+    needs: build-and-push-docker
+    runs-on: [self-hosted, modgu-prod-runner]
 
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     env:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
-      CONTAINER_NAME: modonggu-backend # 컨테이너 이름
+      CONTAINER_NAME: modonggu-backend-prod
+      DOCKER_TAG: ${{ github.ref_name }}
 
     steps:
       - name: Pull latest Docker image
         run: |
           echo "최신 도커 이미지 Pull 중..."
-          docker pull $DOCKER_IMAGE_NAME:latest
+          docker pull $DOCKER_IMAGE_NAME:${DOCKER_TAG}
 
-      - name: Deploy to EC2 and Run Docker Container
+      - name: Deploy to Prod EC2 and Run Docker Container
         run: |
           echo "docker-compose 재시작..."
           cd /home/ubuntu/9term-main-back
           docker-compose down
           docker-compose up -d
-
-      - name: Check Container Status
+      - &check-container
+        name: Check Container Status
         run: |
           echo "--- 컨테이너 상태 확인 중 ---"
           sleep 20
@@ -85,3 +91,29 @@ jobs:
               echo "컨테이너가 실행 중이 아닙니다. 다시 확인하세요."
               exit 1
           fi
+
+  ## dev deploy
+  deploy-to-ec2-dev:
+    needs: build-and-push-docker
+    runs-on: [self-hosted, modgu-dev-runner]
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    env:
+      DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
+      CONTAINER_NAME: modonggu-backend-dev
+      DOCKER_TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Pull latest Docker image
+        run: |
+          echo "최신 도커 이미지 Pull 중..."
+          docker pull $DOCKER_IMAGE_NAME:${DOCKER_TAG}
+
+      - name: Deploy to dev EC2 and Run Docker Container
+        run: |
+          echo "docker-compose 재시작..."
+          cd /home/ubuntu/9term-main-back
+          docker-compose down
+          docker-compose up -d
+      - *check-container
