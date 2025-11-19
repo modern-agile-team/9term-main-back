@@ -62,7 +62,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
-      CONTAINER_NAME: modonggu-backend-prod
+      CONTAINER_NAME: modonggu-backend
       DOCKER_TAG: ${{ github.ref_name }}
 
     steps:
@@ -101,7 +101,7 @@ jobs:
 
     env:
       DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/modgu
-      CONTAINER_NAME: modonggu-backend-dev
+      CONTAINER_NAME: modonggu-backend
       DOCKER_TAG: ${{ github.ref_name }}
 
     steps:
