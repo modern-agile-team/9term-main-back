@@ -133,4 +133,32 @@ export class MemberRepository {
       },
     });
   }
+
+  async findManagedGroupsWithManagerCount(userId: number) {
+    return this.prisma.userGroup.findMany({
+      where: {
+        userId,
+        role: UserGroupRole.MANAGER,
+        status: MembershipStatus.APPROVED,
+      },
+      select: {
+        groupId: true,
+        group: {
+          select: {
+            name: true,
+            _count: {
+              select: {
+                userGroups: {
+                  where: {
+                    role: UserGroupRole.MANAGER,
+                    status: MembershipStatus.APPROVED,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }

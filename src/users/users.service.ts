@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,10 +22,12 @@ import {
   UserProfileDto,
   UserProfileNextDateDto,
 } from 'src/users/dto/responses/user-profile.dto';
+import { UserDeletionService } from './user-deletion.service';
 import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   private readonly defaultImageKeys: string[];
   private readonly NAME_CHANGE_INTERVAL_DAYS = 30;
 
@@ -32,6 +35,7 @@ export class UsersService {
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly usersRepository: UsersRepository,
+    private readonly userDeletionService: UserDeletionService,
   ) {
     const defaultImagesString = this.configService.get<string>(
       'DEFAULT_PROFILE_IMAGE_URL',
@@ -334,5 +338,9 @@ export class UsersService {
         '내 그룹 목록 조회 중 오류가 발생했습니다.',
       );
     }
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    return this.userDeletionService.deleteUser(userId);
   }
 }
