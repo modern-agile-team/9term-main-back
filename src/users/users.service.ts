@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -27,7 +26,6 @@ import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  private readonly logger = new Logger(UsersService.name);
   private readonly defaultImageKeys: string[];
   private readonly NAME_CHANGE_INTERVAL_DAYS = 30;
 

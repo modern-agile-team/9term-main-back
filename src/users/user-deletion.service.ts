@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Service } from 'src/s3/s3.service';
 import { UsersRepository } from './users.repository';
 import { MembersService } from '../member/member.service';
+import { UsersService } from './users.service';
 
 @Injectable()
 export class UserDeletionService {
@@ -12,8 +12,8 @@ export class UserDeletionService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly membersService: MembersService,
-    private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
   ) {
     const defaultImagesString = this.configService.get<string>(
       'DEFAULT_PROFILE_IMAGE_URL',
@@ -46,7 +46,7 @@ export class UserDeletionService {
 
     const previousProfileImgKey = user.profileImgPath;
 
-    const CustomProfileImage =
+    const hasCustomProfileImage =
       previousProfileImgKey &&
       !this.defaultImageKeys.includes(previousProfileImgKey);
 
@@ -56,18 +56,11 @@ export class UserDeletionService {
       email: null,
       emailVerified: false,
       password: null,
-      profileImgPath: this.getRandomDefaultImageKey(),
       nameChangedAt: null,
     });
 
-    if (CustomProfileImage) {
-      await this.s3Service.deleteFile(previousProfileImgKey).catch((err) => {
-        this.logger.error(
-          `사용자(${userId}) 탈퇴 시 프로필 이미지 삭제 실패: ${previousProfileImgKey}`,
-          err.stack,
-          `${UserDeletionService.name}#deleteUser`,
-        );
-      });
+    if (hasCustomProfileImage && previousProfileImgKey) {
+      await this.usersService.resetProfileImage(userId);
     }
 
     this.logger.log(`사용자 ${userId} 탈퇴 처리 완료`);
