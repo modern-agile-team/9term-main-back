@@ -35,7 +35,7 @@ export class PostsService {
   private async ensureManager(groupId: number, userId: number) {
     const member = await this.memberRepository.findGroupMember(groupId, userId);
     if (!member || member.role !== UserGroupRole.MANAGER) {
-      throw new ForbiddenException('공지 작성/변경은 메니저만 가능합니다');
+      throw new ForbiddenException('공지 작성/변경은 매니저만 가능합니다');
     }
   }
 
