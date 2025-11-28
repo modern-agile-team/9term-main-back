@@ -8,7 +8,7 @@ import { NotificationsService } from './notifications.service';
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => GroupsModule),
     forwardRef(() => MemberModule),
   ],
