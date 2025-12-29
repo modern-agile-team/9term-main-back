@@ -67,7 +67,7 @@ const notFoundExamples = {
 };
 
 // 성공 응답
-const ApiResponseWithData = <T extends Type<any>>(
+const apiResponseWithData = <T extends Type<any>>(
   model: T,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
@@ -91,7 +91,7 @@ const ApiResponseWithData = <T extends Type<any>>(
   );
 };
 
-const ApiResponseWithArrayData = <T extends Type<any>>(
+const apiResponseWithArrayData = <T extends Type<any>>(
   model: T,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
@@ -179,7 +179,7 @@ export const ApiComments = {
         summary: '댓글 생성',
         description: '게시글에 댓글을 생성합니다.',
       }),
-      ApiResponseWithData(
+      apiResponseWithData(
         ResCommentDto,
         201,
         '댓글이 성공적으로 생성되었습니다.',
@@ -201,7 +201,7 @@ export const ApiComments = {
   update: () =>
     applyDecorators(
       ApiOperation({ summary: '댓글 수정', description: '댓글을 수정합니다.' }),
-      ApiResponseWithData(
+      apiResponseWithData(
         ResCommentDto,
         200,
         '댓글이 성공적으로 수정되었습니다.',
@@ -235,7 +235,7 @@ export const ApiComments = {
         required: false,
         example: 1,
       }),
-      ApiResponseWithArrayData(
+      apiResponseWithArrayData(
         ResCommentDto,
         200,
         '댓글이 성공적으로 조회되었습니다.',
