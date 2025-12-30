@@ -1,115 +1,97 @@
-import { applyDecorators } from '@nestjs/common';
+import { applyDecorators, Type } from '@nestjs/common';
 import {
   ApiBody,
   ApiConsumes,
+  ApiExtraModels,
   ApiOperation,
-  ApiResponse,
   ApiParam,
+  ApiResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
-import { PostCategory } from '@prisma/client';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import {
+  apiErrorResponse,
+  apiErrorResponses,
+} from 'src/common/swagger/response.helper';
+import { CreatePostRequestDto } from './dto/requests/create-post.dto';
+import { UpdatePostRequestDto } from './dto/requests/update-post.dto';
+import { PostResponseDto } from './dto/responses/post-response.dto';
 
-const unauthorizedExamples = () =>
-  ApiResponse({
-    status: 401,
-    description: '인증되지 않은 사용자',
-    content: {
-      'application/json': {
-        examples: {
-          TokenExpired: {
-            value: {
-              message: '토큰이 만료되었습니다. 다시 로그인해주세요.',
-              error: 'Unauthorized',
-              statusCode: 401,
-            },
-          },
-          InvalidToken: {
-            value: {
-              message: '유효하지 않은 토큰입니다.',
-              error: 'Unauthorized',
-              statusCode: 401,
-            },
-          },
-        },
-      },
-    },
-  });
+const badRequestExamples = {
+  MissingRequired: {
+    message: ['제목과 내용은 비워둘 수 없습니다.'],
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+  InvalidCategory: {
+    message: ['category 값이 올바르지 않습니다.'],
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+};
 
-const forbiddenExamples = () =>
-  ApiResponse({
-    status: 403,
-    description: '권한 없음',
-    content: {
-      'application/json': {
-        examples: {
-          NotAuthor: {
-            value: {
-              message: '게시물 수정/삭제 권한이 없습니다.',
-              error: 'Forbidden',
-              statusCode: 403,
-            },
-          },
-        },
-      },
-    },
-  });
+const unauthorizedExamples = {
+  TokenExpired: {
+    message: '토큰이 만료되었습니다. 다시 로그인해주세요.',
+    error: 'Unauthorized',
+    statusCode: 401,
+  },
+  InvalidToken: {
+    message: '유효하지 않은 토큰입니다.',
+    error: 'Unauthorized',
+    statusCode: 401,
+  },
+};
 
-const badRequestExamples = () =>
-  ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    content: {
-      'application/json': {
-        examples: {
-          MissingRequired: {
-            value: {
-              message: ['제목과 내용은 비워둘 수 없습니다.'],
-              error: 'Bad Request',
-              statusCode: 400,
-            },
-          },
-          InvalidCategory: {
-            value: {
-              message: ['category 값이 올바르지 않습니다.'],
-              error: 'Bad Request',
-              statusCode: 400,
-            },
-          },
-        },
-      },
-    },
-  });
+const forbiddenExamples = {
+  AnnouncementForbidden: {
+    message: '공지 작성/변경은 매니저만 가능합니다',
+    error: 'Forbidden',
+    statusCode: 403,
+  },
+  AuthorForbidden: {
+    message: '게시물 수정/삭제 권한이 없습니다.',
+    error: 'Forbidden',
+    statusCode: 403,
+  },
+};
 
-const notFoundExamples = (targets: Array<'Post' | 'Group'> = ['Post']) =>
-  ApiResponse({
-    status: 404,
-    description: `${targets.join(', ')} 리소스를 찾을 수 없음`,
-    content: {
-      'application/json': {
-        examples: {
-          ...(targets.includes('Post') && {
-            PostNotFound: {
-              summary: 'PostNotFound',
-              value: {
-                message: 'ID가 {postId}인 게시물을 찾을 수 없습니다.',
-                error: 'Not Found',
-                statusCode: 404,
-              },
+const notFoundExamples = {
+  PostNotFound: {
+    message: 'ID가 {postId}인 게시물을 찾을 수 없습니다.',
+    error: 'Not Found',
+    statusCode: 404,
+  },
+  GroupNotFound: {
+    message: 'ID가 {groupId}인 그룹을 찾을 수 없습니다.',
+    error: 'Not Found',
+    statusCode: 404,
+  },
+};
+
+const apiResponseWithData = <T extends Type<any>>(
+  model: T,
+  status = 200,
+  description = '요청이 성공적으로 처리되었습니다.',
+) => {
+  return applyDecorators(
+    ApiExtraModels(ApiResponseDto, model),
+    ApiResponse({
+      status,
+      description,
+      schema: {
+        allOf: [
+          { $ref: getSchemaPath(ApiResponseDto) },
+          {
+            properties: {
+              data: { $ref: getSchemaPath(model) },
             },
-          }),
-          ...(targets.includes('Group') && {
-            GroupNotFound: {
-              summary: 'GroupNotFound',
-              value: {
-                message: 'ID가 {groupId}인 그룹을 찾을 수 없습니다.',
-                error: 'Not Found',
-                statusCode: 404,
-              },
-            },
-          }),
-        },
+          },
+        ],
       },
-    },
-  });
+    }),
+  );
+};
 
 export const ApiPosts = {
   create: () =>
@@ -118,71 +100,22 @@ export const ApiPosts = {
         summary: '게시물 생성',
         description: '새로운 게시물을 생성합니다.',
       }),
-      ApiParam({
-        name: 'groupId',
-        required: true,
-        description: '게시물이 소속될 그룹 ID',
-        schema: { type: 'integer', example: 15 },
-      }),
       ApiConsumes('multipart/form-data'),
       ApiBody({
-        schema: {
-          type: 'object',
-          properties: {
-            title: { type: 'string', example: '첫 번째 글' },
-            content: {
-              type: 'string',
-              example: '안녕하세요! 본문 내용입니다.',
-            },
-            category: {
-              type: 'string',
-              enum: Object.values(PostCategory),
-              example: PostCategory.NORMAL,
-              description: `게시물 분류 (예: ${Object.values(PostCategory).join(', ')})`,
-            },
-            postImage: {
-              type: 'string',
-              format: 'binary',
-              description: '업로드할 이미지 파일(선택)',
-            },
-          },
-          required: ['title', 'content'],
-        },
+        type: CreatePostRequestDto,
       }),
-      ApiResponse({
-        status: 201,
-        description: '게시물 생성 완료',
-        content: {
-          'application/json': {
-            example: {
-              status: 'success',
-              message: '게시물이 성공적으로 생성되었습니다.',
-              data: {
-                id: 118,
-                groupId: 15,
-                user: {
-                  id: 12,
-                  name: '권혁진',
-                  profileImageUrl:
-                    'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/profile/1.jpg',
-                },
-                createdAt: '2025-08-08T04:42:01.057Z',
-                updatedAt: null,
-                category: 'NORMAL',
-                title: '이하',
-                content: '서',
-                postImageUrl:
-                  'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/post/1.jpg',
-                commentsCount: 0,
-                likesCount: 0,
-                isLiked: false,
-              },
-            },
-          },
-        },
-      }),
-      badRequestExamples(),
-      unauthorizedExamples(),
+      apiResponseWithData(
+        PostResponseDto,
+        201,
+        '게시물이 성공적으로 생성되었습니다.',
+      ),
+      apiErrorResponses(400, '잘못된 요청', badRequestExamples),
+      apiErrorResponses(401, '유효하지 않은 토큰', unauthorizedExamples),
+      apiErrorResponse(
+        403,
+        '권한 없음',
+        forbiddenExamples.AnnouncementForbidden,
+      ),
     ),
 
   getAll: () =>
@@ -190,12 +123,6 @@ export const ApiPosts = {
       ApiOperation({
         summary: '그룹 내 게시물 목록 조회',
         description: '특정 그룹의 게시물 목록을 조회합니다.',
-      }),
-      ApiParam({
-        name: 'groupId',
-        required: true,
-        description: '그룹 ID',
-        schema: { type: 'integer', example: 15 },
       }),
       ApiResponse({
         status: 200,
@@ -250,63 +177,71 @@ export const ApiPosts = {
           },
         },
       }),
-      notFoundExamples(['Group']),
-      unauthorizedExamples(),
+      apiErrorResponses(401, '유효하지 않은 토큰', unauthorizedExamples),
+      apiErrorResponse(
+        404,
+        '요청한 리소스를 찾을 수 없음',
+        notFoundExamples.GroupNotFound,
+      ),
     ),
 
-  getOne: () =>
-    applyDecorators(
-      ApiOperation({
-        summary: '게시물 단건 조회',
-        description: '게시물 상세 정보를 조회합니다.',
-      }),
-      ApiParam({
-        name: 'groupId',
-        required: true,
-        description: '그룹 ID',
-        schema: { type: 'integer', example: 15 },
-      }),
-      ApiParam({
-        name: 'postId',
-        required: true,
-        description: '게시물 ID',
-        schema: { type: 'integer', example: 118 },
-      }),
-      ApiResponse({
-        status: 200,
-        description: '게시물 조회 성공',
-        content: {
-          'application/json': {
-            example: {
-              status: 'success',
-              message: '게시물을 성공적으로 가져왔습니다.',
-              data: {
-                id: 118,
-                groupId: 15,
-                user: {
-                  id: 12,
-                  name: '권혁진',
-                  profileImageUrl:
-                    'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/profile/2.jpg',
-                },
-                createdAt: '2025-08-08T04:42:01.057Z',
-                updatedAt: null,
-                category: 'NORMAL',
-                title: '이하',
-                content: '서',
-                postImageUrl:
-                  'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/post/2.jpg',
-                commentsCount: 1,
-                likesCount: 0,
-                isLiked: false,
-              },
-            },
-          },
-        },
-      }),
-      notFoundExamples(['Post']),
-      unauthorizedExamples(),
-    ),
+  // getOne: () =>
+  //   applyDecorators(
+  //     ApiOperation({
+  //       summary: '게시물 단건 조회',
+  //       description: '게시물 상세 정보를 조회합니다.',
+  //     }),
+  //     ApiParam({
+  //       name: 'groupId',
+  //       required: true,
+  //       description: '그룹 ID',
+  //       schema: { type: 'integer', example: 15 },
+  //     }),
+  //     ApiParam({
+  //       name: 'postId',
+  //       required: true,
+  //       description: '게시물 ID',
+  //       schema: { type: 'integer', example: 118 },
+  //     }),
+  //     ApiResponse({
+  //       status: 200,
+  //       description: '게시물 조회 성공',
+  //       content: {
+  //         'application/json': {
+  //           example: {
+  //             status: 'success',
+  //             message: '게시물을 성공적으로 가져왔습니다.',
+  //             data: {
+  //               id: 118,
+  //               groupId: 15,
+  //               user: {
+  //                 id: 12,
+  //                 name: '권혁진',
+  //                 profileImageUrl:
+  //                   'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/profile/2.jpg',
+  //               },
+  //               createdAt: '2025-08-08T04:42:01.057Z',
+  //               updatedAt: null,
+  //               category: 'NORMAL',
+  //               title: '이하',
+  //               content: '서',
+  //               postImageUrl:
+  //                 'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/post/2.jpg',
+  //               commentsCount: 1,
+  //               likesCount: 0,
+  //               isLiked: false,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     }),
+  //     apiErrorResponse(
+  //       404,
+  //       '요청한 리소스를 찾을 수 없음',
+  //       notFoundExamples.PostNotFound,
+  //     ),
+  //     apiErrorResponses(401, '유효하지 않은 토큰', unauthorizedExamples),
+  //   ),
 
   update: () =>
     applyDecorators(
@@ -327,55 +262,17 @@ export const ApiPosts = {
         schema: { type: 'integer', example: 118 },
       }),
       ApiBody({
-        schema: {
-          type: 'object',
-          properties: {
-            title: { type: 'string', example: '수정된 제목' },
-            content: { type: 'string', example: '수정된 본문 내용' },
-            category: {
-              type: 'string',
-              enum: Object.values(PostCategory),
-              example: PostCategory.NORMAL,
-            },
-          },
-        },
+        type: UpdatePostRequestDto,
       }),
-      ApiResponse({
-        status: 200,
-        description: '게시물 수정 성공',
-        content: {
-          'application/json': {
-            example: {
-              status: 'success',
-              message: '게시물이 성공적으로 수정되었습니다.',
-              data: {
-                id: 118,
-                groupId: 15,
-                user: {
-                  id: 12,
-                  name: '권혁진',
-                  profileImageUrl:
-                    'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/profile/1.jpg',
-                },
-                createdAt: '2025-08-08T04:42:01.057Z',
-                updatedAt: '2025-08-09T08:21:00.000Z',
-                category: 'NORMAL',
-                title: '수정된 제목',
-                content: '수정된 본문 내용',
-                postImageUrl:
-                  'https://modgu-main-s3.s3.ap-northeast-2.amazonaws.com/post/2.jpg',
-                commentsCount: 1,
-                likesCount: 0,
-                isLiked: false,
-              },
-            },
-          },
-        },
-      }),
-      badRequestExamples(),
-      notFoundExamples(['Post']),
-      forbiddenExamples(),
-      unauthorizedExamples(),
+      apiResponseWithData(
+        PostResponseDto,
+        200,
+        '게시물이 성공적으로 수정되었습니다.',
+      ),
+      apiErrorResponses(400, '잘못된 요청', badRequestExamples),
+      apiErrorResponses(401, '유효하지 않은 토큰', unauthorizedExamples),
+      apiErrorResponse(403, '권한 없음', forbiddenExamples.AuthorForbidden),
+      apiErrorResponses(404, '요청한 리소스를 찾을 수 없음', notFoundExamples),
     ),
 
   remove: () =>
@@ -409,8 +306,8 @@ export const ApiPosts = {
           },
         },
       }),
-      notFoundExamples(['Post']),
-      forbiddenExamples(),
-      unauthorizedExamples(),
+      apiErrorResponses(401, '유효하지 않은 토큰', unauthorizedExamples),
+      apiErrorResponse(403, '권한 없음', forbiddenExamples.AuthorForbidden),
+      apiErrorResponses(404, '요청한 리소스를 찾을 수 없음', notFoundExamples),
     ),
 };

@@ -6,10 +6,27 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
+import {
+  apiErrorResponse,
+  apiErrorResponses,
+} from 'src/common/swagger/response.helper';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ResCommentDto } from './dto/responses/res-comment.dto';
 
-// 공통 Unauthorized
+// 예외 응답 예시
+const badRequestExamples = {
+  InvalidNestedReply: {
+    message: '대댓글에는 답글을 달 수 없습니다.',
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+  ContentRequired: {
+    message: ['content must be a string', '댓글 내용은 필수입니다.'],
+    error: 'Bad Request',
+    statusCode: 400,
+  },
+};
+
 const unauthorizedExamples = {
   TokenExpired: {
     message: '토큰이 만료되었습니다. 다시 로그인해주세요.',
@@ -20,20 +37,6 @@ const unauthorizedExamples = {
     message: '유효하지 않은 토큰입니다.',
     error: 'Unauthorized',
     statusCode: 401,
-  },
-};
-
-// 공통 Not Found
-const notFoundExamples = {
-  PostNotFound: {
-    message: '존재하지 않는 게시글입니다.',
-    error: 'Not Found',
-    statusCode: 404,
-  },
-  CommentNotFound: {
-    message: '존재하지 않는 댓글입니다.',
-    error: 'Not Found',
-    statusCode: 404,
   },
 };
 
@@ -50,34 +53,21 @@ const forbiddenExamples = {
   },
 };
 
-// 래핑 함수
-const withUnauthorizedResponses = () =>
-  unauthorizedResponses(unauthorizedExamples);
-
-const withForbiddenResponses = (keys: (keyof typeof forbiddenExamples)[]) =>
-  ForbiddenResponses(
-    keys.reduce(
-      (obj, key) => {
-        obj[key] = forbiddenExamples[key];
-        return obj;
-      },
-      {} as Record<string, any>,
-    ),
-  );
-
-const withNotFoundResponses = (keys: (keyof typeof notFoundExamples)[]) =>
-  NotFoundResponses(
-    keys.reduce(
-      (obj, key) => {
-        obj[key] = notFoundExamples[key];
-        return obj;
-      },
-      {} as Record<string, any>,
-    ),
-  );
+const notFoundExamples = {
+  PostNotFound: {
+    message: '존재하지 않는 게시글입니다.',
+    error: 'Not Found',
+    statusCode: 404,
+  },
+  CommentNotFound: {
+    message: '존재하지 않는 댓글입니다.',
+    error: 'Not Found',
+    statusCode: 404,
+  },
+};
 
 // 성공 응답
-const ApiResponseWithData = <T extends Type<any>>(
+const apiResponseWithData = <T extends Type<any>>(
   model: T,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
@@ -101,7 +91,7 @@ const ApiResponseWithData = <T extends Type<any>>(
   );
 };
 
-const ApiResponseWithArrayData = <T extends Type<any>>(
+const apiResponseWithArrayData = <T extends Type<any>>(
   model: T,
   status = 200,
   description = '요청이 성공적으로 처리되었습니다.',
@@ -182,99 +172,6 @@ const successResponseNoData = (message: string, status = 200) =>
     },
   });
 
-// 클라이언트 요청 오류 응답
-const badRequestResponse = () =>
-  ApiResponse({
-    status: 400,
-    description: '잘못된 요청 데이터',
-    content: {
-      'application/json': {
-        example: {
-          message: ['content must be a string', '댓글 내용은 필수입니다.'],
-          error: 'Bad Request',
-          statusCode: 400,
-        },
-      },
-    },
-  });
-
-const unauthorizedResponses = (examples: {
-  [key: string]: { message: string; error: string; statusCode: number };
-}) =>
-  ApiResponse({
-    status: 401,
-    description: '인증되지 않음 (JWT 토큰 없음 또는 유효하지 않음)',
-    content: {
-      'application/json': {
-        examples: Object.entries(examples).reduce(
-          (acc, [name, exValue]) => {
-            acc[name] = {
-              value: {
-                message: exValue.message,
-                error: exValue.error,
-                statusCode: exValue.statusCode,
-              },
-            };
-            return acc;
-          },
-          {} as { [key: string]: { value: any } },
-        ),
-      },
-    },
-  });
-
-// 인증 / 권한 관련 응답
-const ForbiddenResponses = (examples: {
-  [key: string]: { message: string; error: string; statusCode: number };
-}) =>
-  ApiResponse({
-    status: 403,
-    description: '권한 없음',
-    content: {
-      'application/json': {
-        examples: Object.entries(examples).reduce(
-          (acc, [name, exValue]) => {
-            acc[name] = {
-              value: {
-                message: exValue.message,
-                error: exValue.error,
-                statusCode: exValue.statusCode,
-              },
-            };
-            return acc;
-          },
-          {} as { [key: string]: { value: any } },
-        ),
-      },
-    },
-  });
-
-// 리소스 없음
-const NotFoundResponses = (examples: {
-  [key: string]: { message: string; error: string; statusCode: number };
-}) =>
-  ApiResponse({
-    status: 404,
-    description: '요청한 리소스를 찾을 수 없음',
-    content: {
-      'application/json': {
-        examples: Object.entries(examples).reduce(
-          (acc, [name, exValue]) => {
-            acc[name] = {
-              value: {
-                message: exValue.message,
-                error: exValue.error,
-                statusCode: exValue.statusCode,
-              },
-            };
-            return acc;
-          },
-          {} as { [key: string]: { value: any } },
-        ),
-      },
-    },
-  });
-
 export const ApiComments = {
   create: () =>
     applyDecorators(
@@ -282,37 +179,45 @@ export const ApiComments = {
         summary: '댓글 생성',
         description: '게시글에 댓글을 생성합니다.',
       }),
-      ApiResponseWithData(
+      apiResponseWithData(
         ResCommentDto,
         201,
         '댓글이 성공적으로 생성되었습니다.',
       ),
-      badRequestResponse(),
-      withUnauthorizedResponses(),
-      withForbiddenResponses(['GroupMemberForbidden']),
-      withNotFoundResponses(['PostNotFound']),
+      apiErrorResponses(400, '잘못된 요청', badRequestExamples),
+      apiErrorResponses(401, '인증되지 않음', unauthorizedExamples),
+      apiErrorResponse(
+        403,
+        '권한 없음',
+        forbiddenExamples.GroupMemberForbidden,
+      ),
+      apiErrorResponse(
+        404,
+        '리소스를 찾을 수 없음',
+        notFoundExamples.PostNotFound,
+      ),
     ),
 
   update: () =>
     applyDecorators(
       ApiOperation({ summary: '댓글 수정', description: '댓글을 수정합니다.' }),
-      ApiResponseWithData(
+      apiResponseWithData(
         ResCommentDto,
         200,
         '댓글이 성공적으로 수정되었습니다.',
       ),
-      withForbiddenResponses(['GroupMemberForbidden', 'CommentForbidden']),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['PostNotFound', 'CommentNotFound']),
+      apiErrorResponses(403, '권한 없음', forbiddenExamples),
+      apiErrorResponses(401, '인증되지 않음', unauthorizedExamples),
+      apiErrorResponses(404, '리소스를 찾을 수 없음', notFoundExamples),
     ),
 
   delete: () =>
     applyDecorators(
       ApiOperation({ summary: '댓글 삭제', description: '댓글을 삭제합니다.' }),
       successResponseNoData('댓글이 성공적으로 삭제되었습니다.'),
-      withForbiddenResponses(['GroupMemberForbidden', 'CommentForbidden']),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['PostNotFound', 'CommentNotFound']),
+      apiErrorResponses(403, '권한 없음', forbiddenExamples),
+      apiErrorResponses(401, '인증되지 않음', unauthorizedExamples),
+      apiErrorResponses(404, '리소스를 찾을 수 없음', notFoundExamples),
     ),
 
   getList: () =>
@@ -330,7 +235,7 @@ export const ApiComments = {
         required: false,
         example: 1,
       }),
-      ApiResponseWithArrayData(
+      apiResponseWithArrayData(
         ResCommentDto,
         200,
         '댓글이 성공적으로 조회되었습니다.',
@@ -368,7 +273,11 @@ export const ApiComments = {
           empty: [],
         },
       ),
-      withUnauthorizedResponses(),
-      withNotFoundResponses(['PostNotFound']),
+      apiErrorResponses(401, '인증되지 않음', unauthorizedExamples),
+      apiErrorResponse(
+        404,
+        '리소스를 찾을 수 없음',
+        notFoundExamples.PostNotFound,
+      ),
     ),
 };
