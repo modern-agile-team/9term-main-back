@@ -8,7 +8,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
@@ -16,6 +15,8 @@ import { AuthService } from './auth.service';
 import { ApiAuth } from './auth.swagger';
 import { LoginRequestDto } from './dto/requests/login-request.dto';
 import { AuthTokenDataDto } from './dto/responses/auth-response.dto';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { KakaoAuthGuard } from './guards/kakao-auth.guard';
 import { JwtRefreshGuard } from './guards/refresh.guard';
 import { OAuthInput } from './interfaces/oauth.interface';
 
@@ -93,13 +94,13 @@ export class AuthController {
   }
 
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   googleLogin() {
     return;
   }
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   @ApiAuth.googleCallback()
   async googleCallback(
     @Req() req: Request & { user: OAuthInput },
@@ -115,13 +116,13 @@ export class AuthController {
   }
 
   @Get('kakao')
-  @UseGuards(AuthGuard('kakao'))
+  @UseGuards(KakaoAuthGuard)
   kakaoLogin() {
     return;
   }
 
   @Get('kakao/callback')
-  @UseGuards(AuthGuard('kakao'))
+  @UseGuards(KakaoAuthGuard)
   @ApiAuth.kakaoCallback()
   async kakaoCallback(
     @Req() req: Request & { user: OAuthInput },
