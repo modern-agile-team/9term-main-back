@@ -65,21 +65,11 @@ export class AuthController {
   @ApiAuth.refresh()
   @Post('refresh')
   async refresh(
-    @Req() req: Request,
+    @Req() req: Request & { user: { userId: number } },
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApiResponseDto<AuthTokenDataDto>> {
-    const refreshToken = req.cookies['refresh_token'] as string;
-    if (!refreshToken) {
-      res.status(400);
-      return {
-        status: 'fail',
-        message: 'Refresh Token이 없습니다.',
-        data: null,
-      };
-    }
-
     const { accessToken, refreshToken: newRefreshToken } =
-      await this.authService.refreshAccessToken(refreshToken);
+      await this.authService.refreshAccessToken(req.user.userId);
 
     res.cookie('refresh_token', newRefreshToken, this.getCookieOptions());
 
