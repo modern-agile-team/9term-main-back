@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InternalServerErrorException } from '@nestjs/common/exceptions/internal-server-error.exception';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
@@ -44,25 +43,17 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<{
+  async refreshAccessToken(userId: number): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
-    try {
-      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      });
-      const user = await this.usersService.findUserById(payload.sub);
-      if (!user) {
-        throw new BadRequestException('유효하지 않은 사용자입니다.');
-      }
-      return this.issueTokens(user);
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        console.log(`에러 발생: ${e.message}`, e.stack);
-      }
-      throw new InternalServerErrorException();
+    const user = await this.usersService.findUserById(userId);
+
+    if (!user) {
+      throw new BadRequestException('유효하지 않은 사용자입니다.');
     }
+
+    return this.issueTokens(user);
   }
 
   async oauthLogin(params: OAuthInput): Promise<{
