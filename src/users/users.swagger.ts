@@ -317,6 +317,55 @@ export const ApiUsers = {
       notFoundResponses(notFoundExamples),
     ),
 
+  deleteUser: () =>
+    applyDecorators(
+      ApiOperation({
+        summary: '회원 탈퇴',
+        description: '로그인한 사용자의 계정을 삭제합니다.',
+      }),
+      ApiResponse({
+        status: 200,
+        description: '회원 탈퇴 완료',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'success' },
+                message: {
+                  type: 'string',
+                  example: '회원 탈퇴가 완료되었습니다.',
+                },
+                data: { type: 'null', nullable: true, example: null },
+              },
+            },
+          },
+        },
+      }),
+      ApiResponse({
+        status: 409,
+        description:
+          '그룹 매니저 권한이 남아 있어 탈퇴할 수 없는 경우에 발생합니다.',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'error' },
+                message: {
+                  type: 'string',
+                  example:
+                    '그룹 매니저 권한을 가진 상태에서는 탈퇴할 수 없습니다. 그룹을 삭제하거나 매니저 권한을 위임한 뒤 다시 시도해주세요.',
+                },
+              },
+            },
+          },
+        },
+      }),
+      unauthorizedResponses(unauthorizedExamples),
+      notFoundResponses(notFoundExamples),
+    ),
+
   getMyGroups: () =>
     applyDecorators(
       ApiOperation({
